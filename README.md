@@ -1,3 +1,8 @@
+# 1/5/2023
+- get followers by id
+- pagination
+- rate limiting
+
 # 12/2/2023
 - .env support
 

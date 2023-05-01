@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"go-twitter-follower/gen"
 
@@ -69,7 +70,7 @@ func GetUserIdFromUsername(client *gen.ClientWithResponses, username string) str
 	return userId
 }
 
-func GetFollowers(client *gen.ClientWithResponses, userId string, pagination_token *string) (*[]gen.User, string) {
+func GetFollowers(client *gen.ClientWithResponses, userId string, pagination_token *string) (*[]gen.User, *string) {
 	params := &gen.UsersIdFollowersParams{
 		Expansions:      nil,
 		MaxResults:      nil,
@@ -93,7 +94,7 @@ func GetFollowers(client *gen.ClientWithResponses, userId string, pagination_tok
 	// 	fmt.Printf("Username: %s\n", user.Username)
 	// }
 
-	next_token := *res.JSON200.Meta.NextToken
+	next_token := res.JSON200.Meta.NextToken
 	return res.JSON200.Data, next_token
 }
 
@@ -107,31 +108,25 @@ func main() {
 	// get user id from user name
 	userId := GetUserIdFromUsername(client, config.Username)
 
-	// pagination without rate limiting
+	// pagination with rate limiting
 	// get followers by id
 	all_followers := make([]gen.User, 0)
-	var pagination_token *string = nil
 
-	rate_limit := 10 // 10 per 15 min
-	for {
-		rate_limit -= 1
+	// first call without limit
+	followers, pagination_token := GetFollowers(client, userId, nil)
+	all_followers = append(all_followers, *followers...)
+	fmt.Printf("[%s] Counting followers: %d\n", time.Now().Format("2006-01-02 15:04:05"), len(all_followers))
 
-		folowers, pagination_token := GetFollowers(client, userId, pagination_token)
+	rate_limiter := time.Tick(1000 * time.Millisecond * 90) // 10 per 15 min
+	for range rate_limiter {
+		followers, pagination_token = GetFollowers(client, userId, pagination_token)
+		all_followers = append(all_followers, *followers...)
+		fmt.Printf("[%s] Counting followers: %d\n", time.Now().Format("2006-01-02 15:04:05"), len(all_followers))
 
-		all_followers = append(all_followers, *folowers...)
-
-		if pagination_token == "" {
-			break
-		}
-		if rate_limit == 0 {
+		if pagination_token == nil {
 			break
 		}
 	}
-
 	num_followers := len(all_followers)
-	if rate_limit == 0 {
-		fmt.Printf("Partial followers: %d\n", num_followers)
-	} else {
-		fmt.Printf("Total followers: %d\n", num_followers)
-	}
+	fmt.Printf("Total followers: %d\n", num_followers)
 }
