@@ -53,7 +53,7 @@ func NewAuthClient(bearerToken string) (*gen.ClientWithResponses, error) {
 	return client, nil
 }
 
-func GetUserIdFromUsername(client *gen.ClientWithResponses, username string) {
+func GetUserIdFromUsername(client *gen.ClientWithResponses, username string) string {
 	res, err := client.FindUserByUsernameWithResponse(context.Background(), username, &gen.FindUserByUsernameParams{
 		UserFields: nil,
 	})
@@ -64,7 +64,37 @@ func GetUserIdFromUsername(client *gen.ClientWithResponses, username string) {
 		log.Fatal(*res.JSONDefault.Status, ": ", *res.JSONDefault.Detail)
 	}
 
-	fmt.Printf("Id: %s\n", res.JSON200.Data.Id)
+	userId := res.JSON200.Data.Id
+	fmt.Printf("Id: %s\n", userId)
+	return userId
+}
+
+func GetFollowers(client *gen.ClientWithResponses, userId string, pagination_token *string) (*[]gen.User, string) {
+	params := &gen.UsersIdFollowersParams{
+		Expansions:      nil,
+		MaxResults:      nil,
+		PaginationToken: nil,
+		TweetFields:     nil,
+		UserFields:      nil,
+	}
+	if pagination_token != nil {
+		params.PaginationToken = pagination_token
+	}
+
+	res, err := client.UsersIdFollowersWithResponse(context.Background(), userId, params)
+	if err != nil {
+		log.Fatal(fmt.Errorf("%w", err))
+	}
+	if res.StatusCode() != http.StatusOK {
+		log.Fatal(*res.JSONDefault.Status, ": ", *res.JSONDefault.Detail)
+	}
+
+	// for _, user := range *res.JSON200.Data {
+	// 	fmt.Printf("Username: %s\n", user.Username)
+	// }
+
+	next_token := *res.JSON200.Meta.NextToken
+	return res.JSON200.Data, next_token
 }
 
 func main() {
@@ -73,5 +103,35 @@ func main() {
 	if err != nil {
 		log.Fatal(fmt.Errorf("%w", err))
 	}
-	GetUserIdFromUsername(client, config.Username)
+
+	// get user id from user name
+	userId := GetUserIdFromUsername(client, config.Username)
+
+	// pagination without rate limiting
+	// get followers by id
+	all_followers := make([]gen.User, 0)
+	var pagination_token *string = nil
+
+	rate_limit := 10 // 10 per 15 min
+	for {
+		rate_limit -= 1
+
+		folowers, pagination_token := GetFollowers(client, userId, pagination_token)
+
+		all_followers = append(all_followers, *folowers...)
+
+		if pagination_token == "" {
+			break
+		}
+		if rate_limit == 0 {
+			break
+		}
+	}
+
+	num_followers := len(all_followers)
+	if rate_limit == 0 {
+		fmt.Printf("Partial followers: %d\n", num_followers)
+	} else {
+		fmt.Printf("Total followers: %d\n", num_followers)
+	}
 }

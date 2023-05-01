@@ -44,5 +44,9 @@ go get github.com/Netflix/go-env
 - json to jaym converter: https://editor.swagger.io/#/
 
 ```sh
-./oapi-codegen --generate types,client --package gen open-api-spec-all-components.json > twitter-user-by-username.gen.go
+go install github.com/deepmap/oapi-codegen/cmd/oapi-codegen@latest
+```
+
+```sh
+./oapi-codegen --generate types,client --package gen open-api-spec-all-components.yaml > gen/twitter-client.gen.go
 ```
