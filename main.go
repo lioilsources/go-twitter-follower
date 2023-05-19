@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -17,6 +18,8 @@ import (
 const (
 	scheme = "https"
 	host   = "api.twitter.com"
+
+	rate_limit = 1000 * time.Millisecond * 90 // 10 per 15 min
 )
 
 // todo: add field annotation `env:"BEARER_TOKEN"`
@@ -94,6 +97,18 @@ func GetFollowers(client *gen.ClientWithResponses, userId string, pagination_tok
 	// 	fmt.Printf("Username: %s\n", user.Username)
 	// }
 
+	// store json response
+	json, err := json.MarshalIndent(res.JSON200.Data, "", "\t")
+	if err != nil {
+		log.Fatal(fmt.Errorf("%w", err))
+	}
+	pagination := "0"
+	if pagination_token != nil {
+		pagination = *pagination_token
+	}
+	filename := fmt.Sprintf("GetFollowers/userId-%s-paginationToken-%s", userId, pagination)
+	store(filename, string(json))
+
 	next_token := res.JSON200.Meta.NextToken
 	return res.JSON200.Data, next_token
 }
@@ -117,7 +132,7 @@ func main() {
 	all_followers = append(all_followers, *followers...)
 	fmt.Printf("[%s] Counting followers: %d\n", time.Now().Format("2006-01-02 15:04:05"), len(all_followers))
 
-	rate_limiter := time.Tick(1000 * time.Millisecond * 90) // 10 per 15 min
+	rate_limiter := time.Tick(rate_limit)
 	for range rate_limiter {
 		followers, pagination_token = GetFollowers(client, userId, pagination_token)
 		all_followers = append(all_followers, *followers...)
@@ -129,4 +144,21 @@ func main() {
 	}
 	num_followers := len(all_followers)
 	fmt.Printf("Total followers: %d\n", num_followers)
+}
+
+func store(filename string, data string) {
+	f, err := os.Create(fmt.Sprintf("%s.json", filename))
+	if err != nil {
+		log.Fatal(fmt.Errorf("%w", err))
+	}
+
+	defer f.Close()
+
+	n3, err := f.WriteString(data)
+	if err != nil {
+		log.Fatal(fmt.Errorf("%w", err))
+	}
+
+	fmt.Printf("wrote %d bytes\n", n3)
+	f.Sync()
 }

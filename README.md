@@ -1,3 +1,6 @@
+# 20/5/2023
+- store json responses to file system
+
 # 1/5/2023
 - get followers by id
 - pagination
@@ -14,13 +17,14 @@ You need to know someone, who is followed by them.
 
 ## Alghoritm
 Get informations from your account
-- endpoint: https://api.twitter.com/2/users/by/username/TWITTER_USERNAME
 - get user id from user name
-- endpoint: https://api.twitter.com/2/users/TWITTER_ID/followers
+- endpoint: https://api.twitter.com/2/users/by/username/TWITTER_USERNAME
 - get followers by id
+- endpoint: https://api.twitter.com/2/users/TWITTER_ID/followers
 - pagination
-- endpoint: https://api.twitter.com/2/users/TWITTER_ID/tweets?max_results=100
+- rate limit
 - get tweets by user id
+- endpoint: https://api.twitter.com/2/users/TWITTER_ID/tweets?max_results=100
 
 Do the same for the username you wanna use
 - filter out same followers
