@@ -19,6 +19,8 @@ const (
 	scheme = "https"
 	host   = "api.twitter.com"
 
+	// https://developer.twitter.com/en/docs/twitter-api/rate-limits#v2-limits
+	// GET_2_lists_id_followers | 10 reqs/15 minutes | 28,800/30days
 	rate_limit = 1000 * time.Millisecond * 90 // 10 per 15 min
 )
 
@@ -73,6 +75,10 @@ func GetUserIdFromUsername(client *gen.ClientWithResponses, username string) str
 	return userId
 }
 
+// deprecated
+// I don't work with followers but followings to make diff against popular account.
+// Number of followers is important metric of popularity but b/c of rate limiting, it is time consuming
+// to get total number fast.
 func GetFollowers(client *gen.ClientWithResponses, userId string, pagination_token *string) (*[]gen.User, *string) {
 	params := &gen.UsersIdFollowersParams{
 		Expansions:      nil,
@@ -106,11 +112,69 @@ func GetFollowers(client *gen.ClientWithResponses, userId string, pagination_tok
 	if pagination_token != nil {
 		pagination = *pagination_token
 	}
-	filename := fmt.Sprintf("GetFollowers/userId-%s-paginationToken-%s", userId, pagination)
-	store(filename, string(json))
+	path := fmt.Sprintf("res/GetFollowers/%s", userId)
+	StoreResponse(path, pagination, string(json))
 
 	next_token := res.JSON200.Meta.NextToken
 	return res.JSON200.Data, next_token
+}
+
+func GetFollowing(client *gen.ClientWithResponses, userId string, pagination_token *string) (*[]gen.User, *string) {
+	params := &gen.UsersIdFollowingParams{
+		Expansions:      nil,
+		MaxResults:      nil,
+		PaginationToken: nil,
+		TweetFields:     nil,
+		UserFields:      nil,
+	}
+	if pagination_token != nil {
+		params.PaginationToken = pagination_token
+	}
+
+	res, err := client.UsersIdFollowingWithResponse(context.Background(), userId, params)
+	if err != nil {
+		log.Fatal(fmt.Errorf("%w", err))
+	}
+	if res.StatusCode() != http.StatusOK {
+		log.Fatal(*res.JSONDefault.Status, ": ", *res.JSONDefault.Detail)
+	}
+
+	// store json response
+	json, err := json.MarshalIndent(res.JSON200.Data, "", "\t")
+	if err != nil {
+		log.Fatal(fmt.Errorf("%w", err))
+	}
+	pagination := "0"
+	if pagination_token != nil {
+		pagination = *pagination_token
+	}
+	path := fmt.Sprintf("res/GetFollowing/%s", userId)
+	StoreResponse(path, pagination, string(json))
+
+	next_token := res.JSON200.Meta.NextToken
+	return res.JSON200.Data, next_token
+}
+
+func StoreResponse(path, filename string, data string) {
+	err := os.MkdirAll(path, os.ModePerm)
+	if err != nil {
+		log.Fatal(fmt.Errorf("%w", err))
+	}
+
+	f, err := os.Create(fmt.Sprintf("%s/%s.json", path, filename))
+	if err != nil {
+		log.Fatal(fmt.Errorf("%w", err))
+	}
+
+	defer f.Close()
+
+	n3, err := f.WriteString(data)
+	if err != nil {
+		log.Fatal(fmt.Errorf("%w", err))
+	}
+
+	fmt.Printf("wrote %d bytes\n", n3)
+	f.Sync()
 }
 
 func main() {
@@ -125,40 +189,23 @@ func main() {
 
 	// pagination with rate limiting
 	// get followers by id
-	all_followers := make([]gen.User, 0)
+	all := make([]gen.User, 0)
 
 	// first call without limit
-	followers, pagination_token := GetFollowers(client, userId, nil)
-	all_followers = append(all_followers, *followers...)
-	fmt.Printf("[%s] Counting followers: %d\n", time.Now().Format("2006-01-02 15:04:05"), len(all_followers))
+	f, pagination_token := GetFollowing(client, userId, nil)
+	all = append(all, *f...)
+	fmt.Printf("[%s] Counting followings: %d\n", time.Now().Format("2006-01-02 15:04:05"), len(all))
 
 	rate_limiter := time.Tick(rate_limit)
 	for range rate_limiter {
-		followers, pagination_token = GetFollowers(client, userId, pagination_token)
-		all_followers = append(all_followers, *followers...)
-		fmt.Printf("[%s] Counting followers: %d\n", time.Now().Format("2006-01-02 15:04:05"), len(all_followers))
+		f, pagination_token = GetFollowing(client, userId, pagination_token)
+		all = append(all, *f...)
+		fmt.Printf("[%s] Counting followings: %d\n", time.Now().Format("2006-01-02 15:04:05"), len(all))
 
 		if pagination_token == nil {
 			break
 		}
 	}
-	num_followers := len(all_followers)
-	fmt.Printf("Total followers: %d\n", num_followers)
-}
-
-func store(filename string, data string) {
-	f, err := os.Create(fmt.Sprintf("%s.json", filename))
-	if err != nil {
-		log.Fatal(fmt.Errorf("%w", err))
-	}
-
-	defer f.Close()
-
-	n3, err := f.WriteString(data)
-	if err != nil {
-		log.Fatal(fmt.Errorf("%w", err))
-	}
-
-	fmt.Printf("wrote %d bytes\n", n3)
-	f.Sync()
+	num := len(all)
+	fmt.Printf("Total followings: %d\n", num)
 }

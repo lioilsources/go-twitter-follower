@@ -4,6 +4,7 @@
 package gen
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -145,7 +146,7 @@ const (
 
 // Defines values for UsersIdFollowersParamsExpansions.
 const (
-	PinnedTweetId UsersIdFollowersParamsExpansions = "pinned_tweet_id"
+	UsersIdFollowersParamsExpansionsPinnedTweetId UsersIdFollowersParamsExpansions = "pinned_tweet_id"
 )
 
 // Defines values for UsersIdFollowersParamsTweetFields.
@@ -172,6 +173,56 @@ const (
 	UsersIdFollowersParamsTweetFieldsSource              UsersIdFollowersParamsTweetFields = "source"
 	UsersIdFollowersParamsTweetFieldsText                UsersIdFollowersParamsTweetFields = "text"
 	UsersIdFollowersParamsTweetFieldsWithheld            UsersIdFollowersParamsTweetFields = "withheld"
+)
+
+// Defines values for UsersIdFollowingParamsUserFields.
+const (
+	UsersIdFollowingParamsUserFieldsCreatedAt       UsersIdFollowingParamsUserFields = "created_at"
+	UsersIdFollowingParamsUserFieldsDescription     UsersIdFollowingParamsUserFields = "description"
+	UsersIdFollowingParamsUserFieldsEntities        UsersIdFollowingParamsUserFields = "entities"
+	UsersIdFollowingParamsUserFieldsId              UsersIdFollowingParamsUserFields = "id"
+	UsersIdFollowingParamsUserFieldsLocation        UsersIdFollowingParamsUserFields = "location"
+	UsersIdFollowingParamsUserFieldsName            UsersIdFollowingParamsUserFields = "name"
+	UsersIdFollowingParamsUserFieldsPinnedTweetId   UsersIdFollowingParamsUserFields = "pinned_tweet_id"
+	UsersIdFollowingParamsUserFieldsProfileImageUrl UsersIdFollowingParamsUserFields = "profile_image_url"
+	UsersIdFollowingParamsUserFieldsProtected       UsersIdFollowingParamsUserFields = "protected"
+	UsersIdFollowingParamsUserFieldsPublicMetrics   UsersIdFollowingParamsUserFields = "public_metrics"
+	UsersIdFollowingParamsUserFieldsUrl             UsersIdFollowingParamsUserFields = "url"
+	UsersIdFollowingParamsUserFieldsUsername        UsersIdFollowingParamsUserFields = "username"
+	UsersIdFollowingParamsUserFieldsVerified        UsersIdFollowingParamsUserFields = "verified"
+	UsersIdFollowingParamsUserFieldsVerifiedType    UsersIdFollowingParamsUserFields = "verified_type"
+	UsersIdFollowingParamsUserFieldsWithheld        UsersIdFollowingParamsUserFields = "withheld"
+)
+
+// Defines values for UsersIdFollowingParamsExpansions.
+const (
+	PinnedTweetId UsersIdFollowingParamsExpansions = "pinned_tweet_id"
+)
+
+// Defines values for UsersIdFollowingParamsTweetFields.
+const (
+	UsersIdFollowingParamsTweetFieldsAttachments         UsersIdFollowingParamsTweetFields = "attachments"
+	UsersIdFollowingParamsTweetFieldsAuthorId            UsersIdFollowingParamsTweetFields = "author_id"
+	UsersIdFollowingParamsTweetFieldsContextAnnotations  UsersIdFollowingParamsTweetFields = "context_annotations"
+	UsersIdFollowingParamsTweetFieldsConversationId      UsersIdFollowingParamsTweetFields = "conversation_id"
+	UsersIdFollowingParamsTweetFieldsCreatedAt           UsersIdFollowingParamsTweetFields = "created_at"
+	UsersIdFollowingParamsTweetFieldsEditControls        UsersIdFollowingParamsTweetFields = "edit_controls"
+	UsersIdFollowingParamsTweetFieldsEditHistoryTweetIds UsersIdFollowingParamsTweetFields = "edit_history_tweet_ids"
+	UsersIdFollowingParamsTweetFieldsEntities            UsersIdFollowingParamsTweetFields = "entities"
+	UsersIdFollowingParamsTweetFieldsGeo                 UsersIdFollowingParamsTweetFields = "geo"
+	UsersIdFollowingParamsTweetFieldsId                  UsersIdFollowingParamsTweetFields = "id"
+	UsersIdFollowingParamsTweetFieldsInReplyToUserId     UsersIdFollowingParamsTweetFields = "in_reply_to_user_id"
+	UsersIdFollowingParamsTweetFieldsLang                UsersIdFollowingParamsTweetFields = "lang"
+	UsersIdFollowingParamsTweetFieldsNonPublicMetrics    UsersIdFollowingParamsTweetFields = "non_public_metrics"
+	UsersIdFollowingParamsTweetFieldsOrganicMetrics      UsersIdFollowingParamsTweetFields = "organic_metrics"
+	UsersIdFollowingParamsTweetFieldsPossiblySensitive   UsersIdFollowingParamsTweetFields = "possibly_sensitive"
+	UsersIdFollowingParamsTweetFieldsPromotedMetrics     UsersIdFollowingParamsTweetFields = "promoted_metrics"
+	UsersIdFollowingParamsTweetFieldsPublicMetrics       UsersIdFollowingParamsTweetFields = "public_metrics"
+	UsersIdFollowingParamsTweetFieldsReferencedTweets    UsersIdFollowingParamsTweetFields = "referenced_tweets"
+	UsersIdFollowingParamsTweetFieldsReplySettings       UsersIdFollowingParamsTweetFields = "reply_settings"
+	UsersIdFollowingParamsTweetFieldsSource              UsersIdFollowingParamsTweetFields = "source"
+	UsersIdFollowingParamsTweetFieldsText                UsersIdFollowingParamsTweetFields = "text"
+	UsersIdFollowingParamsTweetFieldsWithheld            UsersIdFollowingParamsTweetFields = "withheld"
 )
 
 // CashtagEntity defines model for CashtagEntity.
@@ -306,6 +357,23 @@ type Get2UsersByUsernameUsernameResponse struct {
 
 // Get2UsersIdFollowersResponse defines model for Get2UsersIdFollowersResponse.
 type Get2UsersIdFollowersResponse struct {
+	Data     *[]User     `json:"data,omitempty"`
+	Errors   *[]Problem  `json:"errors,omitempty"`
+	Includes *Expansions `json:"includes,omitempty"`
+	Meta     *struct {
+		// NextToken The next token.
+		NextToken *NextToken `json:"next_token,omitempty"`
+
+		// PreviousToken The previous token.
+		PreviousToken *PreviousToken `json:"previous_token,omitempty"`
+
+		// ResultCount The number of results returned in this response.
+		ResultCount *ResultCount `json:"result_count,omitempty"`
+	} `json:"meta,omitempty"`
+}
+
+// Get2UsersIdFollowingResponse defines model for Get2UsersIdFollowingResponse.
+type Get2UsersIdFollowingResponse struct {
 	Data     *[]User     `json:"data,omitempty"`
 	Errors   *[]Problem  `json:"errors,omitempty"`
 	Includes *Expansions `json:"includes,omitempty"`
@@ -800,6 +868,9 @@ type User struct {
 // UserId Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.
 type UserId = string
 
+// UserIdMatchesAuthenticatedUser Unique identifier of this User. The value must be the same as the authenticated user.
+type UserIdMatchesAuthenticatedUser = string
+
 // UserName The Twitter handle (screen name) of this user.
 type UserName = string
 
@@ -814,6 +885,21 @@ type UserWithheld struct {
 
 // UserWithheldScope Indicates that the content being withheld is a `user`.
 type UserWithheldScope string
+
+// UsersFollowingCreateRequest defines model for UsersFollowingCreateRequest.
+type UsersFollowingCreateRequest struct {
+	// TargetUserId Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.
+	TargetUserId UserId `json:"target_user_id"`
+}
+
+// UsersFollowingCreateResponse defines model for UsersFollowingCreateResponse.
+type UsersFollowingCreateResponse struct {
+	Data *struct {
+		Following     *bool `json:"following,omitempty"`
+		PendingFollow *bool `json:"pending_follow,omitempty"`
+	} `json:"data,omitempty"`
+	Errors *[]Problem `json:"errors,omitempty"`
+}
 
 // TweetFieldsParameter The fields available for a Tweet object.
 type TweetFieldsParameter = []string
@@ -871,6 +957,36 @@ type UsersIdFollowersParamsExpansions string
 
 // UsersIdFollowersParamsTweetFields defines parameters for UsersIdFollowers.
 type UsersIdFollowersParamsTweetFields string
+
+// UsersIdFollowingParams defines parameters for UsersIdFollowing.
+type UsersIdFollowingParams struct {
+	// MaxResults The maximum number of results.
+	MaxResults *int32 `form:"max_results,omitempty" json:"max_results,omitempty"`
+
+	// PaginationToken This parameter is used to get a specified 'page' of results.
+	PaginationToken *PaginationToken32 `form:"pagination_token,omitempty" json:"pagination_token,omitempty"`
+
+	// UserFields A comma separated list of User fields to display.
+	UserFields *UserFieldsParameter `form:"user.fields,omitempty" json:"user.fields,omitempty"`
+
+	// Expansions A comma separated list of fields to expand.
+	Expansions *UserExpansionsParameter `form:"expansions,omitempty" json:"expansions,omitempty"`
+
+	// TweetFields A comma separated list of Tweet fields to display.
+	TweetFields *TweetFieldsParameter `form:"tweet.fields,omitempty" json:"tweet.fields,omitempty"`
+}
+
+// UsersIdFollowingParamsUserFields defines parameters for UsersIdFollowing.
+type UsersIdFollowingParamsUserFields string
+
+// UsersIdFollowingParamsExpansions defines parameters for UsersIdFollowing.
+type UsersIdFollowingParamsExpansions string
+
+// UsersIdFollowingParamsTweetFields defines parameters for UsersIdFollowing.
+type UsersIdFollowingParamsTweetFields string
+
+// UsersIdFollowJSONRequestBody defines body for UsersIdFollow for application/json ContentType.
+type UsersIdFollowJSONRequestBody = UsersFollowingCreateRequest
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
@@ -950,6 +1066,14 @@ type ClientInterface interface {
 
 	// UsersIdFollowers request
 	UsersIdFollowers(ctx context.Context, id UserId, params *UsersIdFollowersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UsersIdFollowing request
+	UsersIdFollowing(ctx context.Context, id UserId, params *UsersIdFollowingParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// UsersIdFollow request with any body
+	UsersIdFollowWithBody(ctx context.Context, id UserIdMatchesAuthenticatedUser, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	UsersIdFollow(ctx context.Context, id UserIdMatchesAuthenticatedUser, body UsersIdFollowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 func (c *Client) FindUserByUsername(ctx context.Context, username string, params *FindUserByUsernameParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -966,6 +1090,42 @@ func (c *Client) FindUserByUsername(ctx context.Context, username string, params
 
 func (c *Client) UsersIdFollowers(ctx context.Context, id UserId, params *UsersIdFollowersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewUsersIdFollowersRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UsersIdFollowing(ctx context.Context, id UserId, params *UsersIdFollowingParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUsersIdFollowingRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UsersIdFollowWithBody(ctx context.Context, id UserIdMatchesAuthenticatedUser, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUsersIdFollowRequestWithBody(c.Server, id, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) UsersIdFollow(ctx context.Context, id UserIdMatchesAuthenticatedUser, body UsersIdFollowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewUsersIdFollowRequest(c.Server, id, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1180,6 +1340,171 @@ func NewUsersIdFollowersRequest(server string, id UserId, params *UsersIdFollowe
 	return req, nil
 }
 
+// NewUsersIdFollowingRequest generates requests for UsersIdFollowing
+func NewUsersIdFollowingRequest(server string, id UserId, params *UsersIdFollowingParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/2/users/%s/following", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	queryValues := queryURL.Query()
+
+	if params.MaxResults != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "max_results", runtime.ParamLocationQuery, *params.MaxResults); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.PaginationToken != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pagination_token", runtime.ParamLocationQuery, *params.PaginationToken); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.UserFields != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", false, "user.fields", runtime.ParamLocationQuery, *params.UserFields); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.Expansions != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", false, "expansions", runtime.ParamLocationQuery, *params.Expansions); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.TweetFields != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", false, "tweet.fields", runtime.ParamLocationQuery, *params.TweetFields); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	queryURL.RawQuery = queryValues.Encode()
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// NewUsersIdFollowRequest calls the generic UsersIdFollow builder with application/json body
+func NewUsersIdFollowRequest(server string, id UserIdMatchesAuthenticatedUser, body UsersIdFollowJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewUsersIdFollowRequestWithBody(server, id, "application/json", bodyReader)
+}
+
+// NewUsersIdFollowRequestWithBody generates requests for UsersIdFollow with any type of body
+func NewUsersIdFollowRequestWithBody(server string, id UserIdMatchesAuthenticatedUser, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/2/users/%s/following", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -1228,6 +1553,14 @@ type ClientWithResponsesInterface interface {
 
 	// UsersIdFollowers request
 	UsersIdFollowersWithResponse(ctx context.Context, id UserId, params *UsersIdFollowersParams, reqEditors ...RequestEditorFn) (*UsersIdFollowersResponse, error)
+
+	// UsersIdFollowing request
+	UsersIdFollowingWithResponse(ctx context.Context, id UserId, params *UsersIdFollowingParams, reqEditors ...RequestEditorFn) (*UsersIdFollowingResponse, error)
+
+	// UsersIdFollow request with any body
+	UsersIdFollowWithBodyWithResponse(ctx context.Context, id UserIdMatchesAuthenticatedUser, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UsersIdFollowResponse, error)
+
+	UsersIdFollowWithResponse(ctx context.Context, id UserIdMatchesAuthenticatedUser, body UsersIdFollowJSONRequestBody, reqEditors ...RequestEditorFn) (*UsersIdFollowResponse, error)
 }
 
 type FindUserByUsernameResponse struct {
@@ -1276,6 +1609,52 @@ func (r UsersIdFollowersResponse) StatusCode() int {
 	return 0
 }
 
+type UsersIdFollowingResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *Get2UsersIdFollowingResponse
+	JSONDefault  *Problem
+}
+
+// Status returns HTTPResponse.Status
+func (r UsersIdFollowingResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UsersIdFollowingResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+type UsersIdFollowResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *UsersFollowingCreateResponse
+	JSONDefault  *Problem
+}
+
+// Status returns HTTPResponse.Status
+func (r UsersIdFollowResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r UsersIdFollowResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 // FindUserByUsernameWithResponse request returning *FindUserByUsernameResponse
 func (c *ClientWithResponses) FindUserByUsernameWithResponse(ctx context.Context, username string, params *FindUserByUsernameParams, reqEditors ...RequestEditorFn) (*FindUserByUsernameResponse, error) {
 	rsp, err := c.FindUserByUsername(ctx, username, params, reqEditors...)
@@ -1292,6 +1671,32 @@ func (c *ClientWithResponses) UsersIdFollowersWithResponse(ctx context.Context, 
 		return nil, err
 	}
 	return ParseUsersIdFollowersResponse(rsp)
+}
+
+// UsersIdFollowingWithResponse request returning *UsersIdFollowingResponse
+func (c *ClientWithResponses) UsersIdFollowingWithResponse(ctx context.Context, id UserId, params *UsersIdFollowingParams, reqEditors ...RequestEditorFn) (*UsersIdFollowingResponse, error) {
+	rsp, err := c.UsersIdFollowing(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUsersIdFollowingResponse(rsp)
+}
+
+// UsersIdFollowWithBodyWithResponse request with arbitrary body returning *UsersIdFollowResponse
+func (c *ClientWithResponses) UsersIdFollowWithBodyWithResponse(ctx context.Context, id UserIdMatchesAuthenticatedUser, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UsersIdFollowResponse, error) {
+	rsp, err := c.UsersIdFollowWithBody(ctx, id, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUsersIdFollowResponse(rsp)
+}
+
+func (c *ClientWithResponses) UsersIdFollowWithResponse(ctx context.Context, id UserIdMatchesAuthenticatedUser, body UsersIdFollowJSONRequestBody, reqEditors ...RequestEditorFn) (*UsersIdFollowResponse, error) {
+	rsp, err := c.UsersIdFollow(ctx, id, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUsersIdFollowResponse(rsp)
 }
 
 // ParseFindUserByUsernameResponse parses an HTTP response from a FindUserByUsernameWithResponse call
@@ -1343,6 +1748,72 @@ func ParseUsersIdFollowersResponse(rsp *http.Response) (*UsersIdFollowersRespons
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest Get2UsersIdFollowersResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUsersIdFollowingResponse parses an HTTP response from a UsersIdFollowingWithResponse call
+func ParseUsersIdFollowingResponse(rsp *http.Response) (*UsersIdFollowingResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UsersIdFollowingResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Get2UsersIdFollowingResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseUsersIdFollowResponse parses an HTTP response from a UsersIdFollowWithResponse call
+func ParseUsersIdFollowResponse(rsp *http.Response) (*UsersIdFollowResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &UsersIdFollowResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest UsersFollowingCreateResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

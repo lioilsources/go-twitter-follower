@@ -116,6 +116,110 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
+  /2/users/{id}/following:
+    get:
+      security:
+        - BearerToken: []
+        - OAuth2UserToken:
+            - follows.read
+            - tweet.read
+            - users.read
+        - UserToken: []
+      tags:
+        - Users
+      summary: Following by User ID
+      description: Returns a list of Users that are being followed by the provided User ID
+      externalDocs:
+        url: https://developer.twitter.com/en/docs/twitter-api/users/follows/api-reference/get-users-id-following
+      operationId: usersIdFollowing
+      parameters:
+        - name: id
+          in: path
+          description: The ID of the User to lookup.
+          required: true
+          example: '2244994945'
+          schema:
+            $ref: '#/components/schemas/UserId'
+          style: simple
+        - name: max_results
+          in: query
+          description: The maximum number of results.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            format: int32
+          style: form
+        - name: pagination_token
+          in: query
+          description: This parameter is used to get a specified 'page' of results.
+          required: false
+          schema:
+            $ref: '#/components/schemas/PaginationToken32'
+          style: form
+        - $ref: '#/components/parameters/UserFieldsParameter'
+        - $ref: '#/components/parameters/UserExpansionsParameter'
+        - $ref: '#/components/parameters/TweetFieldsParameter'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Get2UsersIdFollowingResponse'
+        default:
+          description: The request has failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+    post:
+      security:
+        - OAuth2UserToken:
+            - follows.write
+            - tweet.read
+            - users.read
+        - UserToken: []
+      tags:
+        - Users
+      summary: Follow User
+      description: Causes the User(in the path) to follow, or “request to follow” for protected Users, the target User. The User(in the path) must match the User context authorizing the request
+      externalDocs:
+        url: https://developer.twitter.com/en/docs/twitter-api/users/follows/api-reference/post-users-source_user_id-following
+      operationId: usersIdFollow
+      parameters:
+        - name: id
+          in: path
+          description: The ID of the authenticated source User that is requesting to follow the target User.
+          required: true
+          schema:
+            $ref: '#/components/schemas/UserIdMatchesAuthenticatedUser'
+          style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsersFollowingCreateRequest'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsersFollowingCreateResponse'
+        default:
+          description: The request has failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
 servers:
   - description: Twitter API
     url: https://api.twitter.com

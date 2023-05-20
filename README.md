@@ -1,5 +1,7 @@
 # 20/5/2023
 - store json responses to file system
+- get following by id
+- deprecated get followers by id
 
 # 1/5/2023
 - get followers by id
@@ -19,17 +21,17 @@ You need to know someone, who is followed by them.
 Get informations from your account
 - get user id from user name
 - endpoint: https://api.twitter.com/2/users/by/username/TWITTER_USERNAME
-- get followers by id
-- endpoint: https://api.twitter.com/2/users/TWITTER_ID/followers
+- get following by id
+- endpoint: https://api.twitter.com/2/users/TWITTER_ID/following
 - pagination
 - rate limit
 - get tweets by user id
 - endpoint: https://api.twitter.com/2/users/TWITTER_ID/tweets?max_results=100
 
-Do the same for the username you wanna use
-- filter out same followers
-- out: number of follower to follow
-- loop: all followers tweets sorted by number
+Diff your followings with other following
+- filter out same following
+- out: number of users to follow
+- loop: all following tweets sorted by number
 - endpoint: POST Follow user; top 5-10 per day
 
 ## GoLang
