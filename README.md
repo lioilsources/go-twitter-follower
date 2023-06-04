@@ -1,3 +1,7 @@
+# 4/6/2023
+- OAuth1 Pin based 
+- unable to get OAuth2 PKCE (need to expose endpoint)
+
 # 20/5/2023
 - store json responses to file system
 - get following by id
@@ -12,6 +16,7 @@
 - .env support
 
 # 11/2/2023
+- OAuth2 Bearer Token
 
 ## Mission
 Follow users with great and stable content to be followed back.
@@ -61,3 +66,6 @@ go install github.com/deepmap/oapi-codegen/cmd/oapi-codegen@latest
 ```sh
 ./oapi-codegen --generate types,client --package gen open-api-spec-all-components.yaml > gen/twitter-client.gen.go
 ```
+
+Reference:
+Twitter rate limits: https://developer.twitter.com/en/docs/twitter-api/rate-limits#v2-limits

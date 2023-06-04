@@ -29,6 +29,15 @@ const (
 type Config struct {
 	BearerToken string
 	Username    string
+	UserId      string
+
+	// OAuth1 credentials
+	ApiKey       string
+	ApiKeySecret string
+
+	// OAuth1 after PIN entered access token
+	AccessToken       string
+	AccessTokenSecret string
 }
 
 func GetConfig() *Config {
@@ -38,8 +47,13 @@ func GetConfig() *Config {
 	}
 
 	return &Config{
-		BearerToken: os.Getenv("BEARER_TOKEN"),
-		Username:    os.Getenv("TWITTER_USERNAME"),
+		BearerToken:       os.Getenv("BEARER_TOKEN"),
+		Username:          os.Getenv("TWITTER_USERNAME"),
+		UserId:            os.Getenv("TWITTER_USER_ID"),
+		ApiKey:            os.Getenv("API_KEY"),
+		ApiKeySecret:      os.Getenv("API_KEY_SECRET"),
+		AccessToken:       os.Getenv("ACCESS_TOKEN"),
+		AccessTokenSecret: os.Getenv("ACCESS_TOKEN_SECRET"),
 	}
 }
 
