@@ -61,6 +61,15 @@ func InitDB() *sql.DB {
 			status_code INTEGER,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
+
+		CREATE TABLE IF NOT EXISTS accounts (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id TEXT NOT NULL UNIQUE,
+			username TEXT NOT NULL,
+			bearer_token TEXT NOT NULL,
+			is_active INTEGER DEFAULT 1,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
 	`)
 	if err != nil {
 		log.Fatal(fmt.Errorf("creating tables: %w", err))
@@ -280,6 +289,79 @@ func GetUsersByIDs(db *sql.DB, ids []string) ([]FollowingUser, error) {
 		users = append(users, u)
 	}
 	return users, nil
+}
+
+// Account represents a tracked Twitter account stored in SQLite.
+type Account struct {
+	ID          int    `json:"id"`
+	UserID      string `json:"user_id"`
+	Username    string `json:"username"`
+	BearerToken string `json:"-"`
+	IsActive    bool   `json:"is_active"`
+	CreatedAt   string `json:"created_at"`
+}
+
+func GetAllAccounts(db *sql.DB) ([]Account, error) {
+	rows, err := db.Query(`SELECT id, user_id, username, bearer_token, is_active, created_at FROM accounts ORDER BY created_at ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var accounts []Account
+	for rows.Next() {
+		var a Account
+		var isActive int
+		if err := rows.Scan(&a.ID, &a.UserID, &a.Username, &a.BearerToken, &isActive, &a.CreatedAt); err != nil {
+			continue
+		}
+		a.IsActive = isActive == 1
+		accounts = append(accounts, a)
+	}
+	return accounts, nil
+}
+
+func GetAccountByUserID(db *sql.DB, userID string) (*Account, error) {
+	var a Account
+	var isActive int
+	err := db.QueryRow(`SELECT id, user_id, username, bearer_token, is_active, created_at FROM accounts WHERE user_id = ?`, userID).
+		Scan(&a.ID, &a.UserID, &a.Username, &a.BearerToken, &isActive, &a.CreatedAt)
+	if err != nil {
+		return nil, err
+	}
+	a.IsActive = isActive == 1
+	return &a, nil
+}
+
+func GetActiveAccounts(db *sql.DB) ([]Account, error) {
+	rows, err := db.Query(`SELECT id, user_id, username, bearer_token, is_active, created_at FROM accounts WHERE is_active = 1 ORDER BY created_at ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var accounts []Account
+	for rows.Next() {
+		var a Account
+		var isActive int
+		if err := rows.Scan(&a.ID, &a.UserID, &a.Username, &a.BearerToken, &isActive, &a.CreatedAt); err != nil {
+			continue
+		}
+		a.IsActive = isActive == 1
+		accounts = append(accounts, a)
+	}
+	return accounts, nil
+}
+
+func AddAccount(db *sql.DB, userID, username, bearerToken string) error {
+	_, err := db.Exec(`INSERT OR IGNORE INTO accounts (user_id, username, bearer_token) VALUES (?, ?, ?)`,
+		userID, username, bearerToken)
+	return err
+}
+
+func RemoveAccount(db *sql.DB, userID string) error {
+	_, err := db.Exec(`DELETE FROM accounts WHERE user_id = ?`, userID)
+	return err
 }
 
 func LogFetch(db *sql.DB, endpoint, userId string, statusCode int) {

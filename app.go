@@ -15,11 +15,11 @@ import (
 )
 
 type App struct {
-	ctx    context.Context
-	db     *sql.DB
-	config *Config
-	client *gen.ClientWithResponses
-	mu     sync.Mutex
+	ctx               context.Context
+	db                *sql.DB
+	config            *Config
+	mu                sync.Mutex
+	selectedAccountID string
 }
 
 type FollowingUser struct {
@@ -45,30 +45,46 @@ type Stats struct {
 	TotalFetches   int    `json:"total_fetches"`
 }
 
+type DiffResult struct {
+	NewUsers  []FollowingUser `json:"new_users"`
+	LostUsers []FollowingUser `json:"lost_users"`
+	FetchedAt string          `json:"fetched_at"`
+}
+
 func NewApp() *App {
 	return &App{}
 }
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-
 	a.config = GetConfig()
-
-	if a.config.BearerToken == "" || a.config.Username == "" {
-		log.Println("Warning: BEARER_TOKEN or TWITTER_USERNAME not set. Create a .env file with your credentials.")
-		a.db = InitDB()
-		return
-	}
-
-	client, err := NewAuthClient(a.config.BearerToken)
-	if err != nil {
-		log.Printf("Error creating auth client: %v", err)
-		a.db = InitDB()
-		return
-	}
-	a.client = client
-
 	a.db = InitDB()
+
+	// Auto-import .env account if configured
+	if a.config.BearerToken != "" && a.config.Username != "" {
+		userId := a.config.UserId
+		if userId == "" {
+			client, err := NewAuthClient(a.config.BearerToken)
+			if err == nil {
+				resolved, err := ResolveUsername(client, a.config.Username)
+				if err == nil {
+					userId = resolved
+				}
+			}
+		}
+		if userId != "" {
+			AddAccount(a.db, userId, a.config.Username, a.config.BearerToken)
+			a.selectedAccountID = userId
+		}
+	}
+
+	// If no account selected, pick the first one
+	if a.selectedAccountID == "" {
+		accounts, _ := GetAllAccounts(a.db)
+		if len(accounts) > 0 {
+			a.selectedAccountID = accounts[0].UserID
+		}
+	}
 
 	// Start background scheduler
 	go a.scheduler()
@@ -80,70 +96,163 @@ func (a *App) shutdown(ctx context.Context) {
 	}
 }
 
-func (a *App) scheduler() {
-	// Fetch immediately on startup
-	a.FetchNow()
+// --- Account management (Wails-bound) ---
 
-	// Then every hour
+func (a *App) GetAccounts() []Account {
+	accounts, err := GetAllAccounts(a.db)
+	if err != nil {
+		log.Printf("Error getting accounts: %v", err)
+		return nil
+	}
+	return accounts
+}
+
+func (a *App) GetSelectedAccount() string {
+	return a.selectedAccountID
+}
+
+func (a *App) SelectAccount(userID string) {
+	a.selectedAccountID = userID
+}
+
+func (a *App) AddNewAccount(username, bearerToken string) (string, error) {
+	client, err := NewAuthClient(bearerToken)
+	if err != nil {
+		return "", fmt.Errorf("invalid bearer token: %w", err)
+	}
+
+	userId, err := ResolveUsername(client, username)
+	if err != nil {
+		return "", fmt.Errorf("could not resolve @%s: %w", username, err)
+	}
+
+	if err := AddAccount(a.db, userId, username, bearerToken); err != nil {
+		return "", fmt.Errorf("failed to save account: %w", err)
+	}
+
+	// Auto-select if first account
+	if a.selectedAccountID == "" {
+		a.selectedAccountID = userId
+	}
+
+	return userId, nil
+}
+
+func (a *App) RemoveAccountByID(userID string) error {
+	if err := RemoveAccount(a.db, userID); err != nil {
+		return err
+	}
+
+	// If we removed the selected account, switch to another
+	if a.selectedAccountID == userID {
+		a.selectedAccountID = ""
+		accounts, _ := GetAllAccounts(a.db)
+		if len(accounts) > 0 {
+			a.selectedAccountID = accounts[0].UserID
+		}
+	}
+	return nil
+}
+
+// --- Scheduler & Fetching ---
+
+func (a *App) scheduler() {
+	a.FetchAllAccounts()
+
 	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
 
 	for {
 		select {
 		case <-ticker.C:
-			a.FetchNow()
+			a.FetchAllAccounts()
 		case <-a.ctx.Done():
 			return
 		}
 	}
 }
 
+func (a *App) FetchAllAccounts() string {
+	accounts, err := GetActiveAccounts(a.db)
+	if err != nil || len(accounts) == 0 {
+		return "No accounts configured."
+	}
+
+	var results []string
+	for _, acct := range accounts {
+		result := a.fetchForAccount(acct)
+		results = append(results, result)
+	}
+	return strings.Join(results, "\n")
+}
+
+// FetchNow fetches for the currently selected account (manual trigger from UI).
 func (a *App) FetchNow() string {
+	if a.selectedAccountID == "" {
+		return "No account selected. Add an account first."
+	}
+
+	acct, err := GetAccountByUserID(a.db, a.selectedAccountID)
+	if err != nil {
+		return "Account not found."
+	}
+
+	return a.fetchForAccount(*acct)
+}
+
+func (a *App) fetchForAccount(acct Account) string {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	if a.client == nil {
-		return "Not configured. Add BEARER_TOKEN and TWITTER_USERNAME to .env file."
-	}
-
-	userId, err := ResolveUsername(a.client, a.config.Username)
+	client, err := NewAuthClient(acct.BearerToken)
 	if err != nil {
-		msg := fmt.Sprintf("Error resolving username: %v", err)
+		msg := fmt.Sprintf("Error for @%s: %v", acct.Username, err)
 		log.Println(msg)
 		return msg
 	}
 
-	all := FetchAllFollowing(a.client, userId)
+	all := FetchAllFollowing(client, acct.UserID)
 
 	for _, user := range all {
 		if err := UpsertUser(a.db, user); err != nil {
 			log.Printf("Warning: failed to upsert user %s: %v", user.Id, err)
 		}
 	}
-	if err := SaveSnapshot(a.db, userId, all); err != nil {
+	if err := SaveSnapshot(a.db, acct.UserID, all); err != nil {
 		log.Printf("Warning: failed to save snapshot: %v", err)
 	}
-	LogFetch(a.db, "GET /2/users/:id/following", userId, 200)
+	LogFetch(a.db, "GET /2/users/:id/following", acct.UserID, 200)
 
-	// Check for changes and notify
-	a.notifyChanges(userId, all)
+	a.notifyChanges(acct.UserID, acct.Username, all)
 
-	msg := fmt.Sprintf("Fetched %d followings at %s", len(all), time.Now().Format("15:04:05"))
+	msg := fmt.Sprintf("Fetched %d for @%s at %s", len(all), acct.Username, time.Now().Format("15:04:05"))
 	log.Println(msg)
 	return msg
 }
 
+// --- Data queries (scoped to selectedAccountID) ---
+
 func (a *App) GetFollowingList() []FollowingUser {
+	if a.selectedAccountID == "" {
+		return nil
+	}
+
 	rows, err := a.db.Query(`
-		SELECT id, username, COALESCE(name, ''), COALESCE(description, ''),
-			COALESCE(followers_count, 0), COALESCE(following_count, 0),
-			COALESCE(tweet_count, 0), COALESCE(listed_count, 0),
-			COALESCE(verified, 0), COALESCE(verified_type, ''),
-			COALESCE(profile_image_url, ''), COALESCE(location, ''),
-			COALESCE(created_at, ''), COALESCE(updated_at, '')
-		FROM users
-		ORDER BY followers_count DESC
-	`)
+		SELECT u.id, u.username, COALESCE(u.name, ''), COALESCE(u.description, ''),
+			COALESCE(u.followers_count, 0), COALESCE(u.following_count, 0),
+			COALESCE(u.tweet_count, 0), COALESCE(u.listed_count, 0),
+			COALESCE(u.verified, 0), COALESCE(u.verified_type, ''),
+			COALESCE(u.profile_image_url, ''), COALESCE(u.location, ''),
+			COALESCE(u.created_at, ''), COALESCE(u.updated_at, '')
+		FROM users u
+		INNER JOIN following_snapshots fs ON u.id = fs.target_user_id
+		WHERE fs.source_user_id = ?
+		  AND fs.fetched_at = (
+			  SELECT MAX(fetched_at) FROM following_snapshots
+			  WHERE source_user_id = ?
+		  )
+		ORDER BY u.followers_count DESC
+	`, a.selectedAccountID, a.selectedAccountID)
 	if err != nil {
 		log.Printf("Error querying users: %v", err)
 		return nil
@@ -168,102 +277,51 @@ func (a *App) GetFollowingList() []FollowingUser {
 	return users
 }
 
-func (a *App) notifyChanges(sourceUserId string, currentUsers []gen.User) {
-	previousIDs, err := GetPreviousFollowingIDs(a.db, sourceUserId)
-	if err != nil {
-		log.Printf("Warning: failed to get previous snapshot: %v", err)
-		return
-	}
-	if previousIDs == nil {
-		return // First fetch, nothing to compare
+func (a *App) GetStats() Stats {
+	var stats Stats
+	if a.selectedAccountID == "" {
+		return stats
 	}
 
-	currentIDs := make(map[string]bool)
-	currentMap := make(map[string]gen.User)
-	for _, u := range currentUsers {
-		currentIDs[u.Id] = true
-		currentMap[u.Id] = u
-	}
+	a.db.QueryRow(`
+		SELECT COUNT(*) FROM following_snapshots
+		WHERE source_user_id = ?
+		  AND fetched_at = (SELECT MAX(fetched_at) FROM following_snapshots WHERE source_user_id = ?)
+	`, a.selectedAccountID, a.selectedAccountID).Scan(&stats.TotalFollowing)
 
-	// New followings
-	var newUsers []string
-	for _, u := range currentUsers {
-		if !previousIDs[u.Id] {
-			newUsers = append(newUsers, "@"+u.Username)
-		}
-	}
+	a.db.QueryRow(`
+		SELECT COALESCE(MAX(created_at), '') FROM fetch_logs WHERE user_id = ?
+	`, a.selectedAccountID).Scan(&stats.LastFetchAt)
 
-	// Lost followings
-	var lostIDs []string
-	for id := range previousIDs {
-		if !currentIDs[id] {
-			lostIDs = append(lostIDs, id)
-		}
-	}
+	a.db.QueryRow(`
+		SELECT COUNT(*) FROM fetch_logs WHERE user_id = ?
+	`, a.selectedAccountID).Scan(&stats.TotalFetches)
 
-	if len(newUsers) > 0 {
-		msg := fmt.Sprintf("New: %s", strings.Join(newUsers, ", "))
-		if err := beeep.Notify("Following Tracker", msg, ""); err != nil {
-			log.Printf("Notification error: %v", err)
-		}
-	}
-
-	if len(lostIDs) > 0 {
-		// Look up usernames from DB
-		var lostNames []string
-		for _, id := range lostIDs {
-			var username string
-			err := a.db.QueryRow("SELECT username FROM users WHERE id = ?", id).Scan(&username)
-			if err == nil {
-				lostNames = append(lostNames, "@"+username)
-			} else {
-				lostNames = append(lostNames, id)
-			}
-		}
-		msg := fmt.Sprintf("Lost: %s", strings.Join(lostNames, ", "))
-		if err := beeep.Notify("Following Tracker", msg, ""); err != nil {
-			log.Printf("Notification error: %v", err)
-		}
-	}
-}
-
-type DiffResult struct {
-	NewUsers  []FollowingUser `json:"new_users"`
-	LostUsers []FollowingUser `json:"lost_users"`
-	FetchedAt string          `json:"fetched_at"`
+	return stats
 }
 
 func (a *App) GetDiff() DiffResult {
 	result := DiffResult{}
-
-	if a.config == nil || a.config.Username == "" {
+	if a.selectedAccountID == "" {
 		return result
 	}
 
-	// Get source user ID from the latest snapshot
-	var sourceUserId string
-	err := a.db.QueryRow(`SELECT DISTINCT source_user_id FROM following_snapshots LIMIT 1`).Scan(&sourceUserId)
-	if err != nil {
-		return result
-	}
-
-	timestamps, err := GetSnapshotTimestamps(a.db, sourceUserId)
+	timestamps, err := GetSnapshotTimestamps(a.db, a.selectedAccountID)
 	if err != nil || len(timestamps) < 2 {
 		return result
 	}
 
 	result.FetchedAt = timestamps[0]
 
-	currentIDs, err := GetSnapshotUserIDs(a.db, sourceUserId, timestamps[0])
+	currentIDs, err := GetSnapshotUserIDs(a.db, a.selectedAccountID, timestamps[0])
 	if err != nil {
 		return result
 	}
-	previousIDs, err := GetSnapshotUserIDs(a.db, sourceUserId, timestamps[1])
+	previousIDs, err := GetSnapshotUserIDs(a.db, a.selectedAccountID, timestamps[1])
 	if err != nil {
 		return result
 	}
 
-	// Find new IDs (in current but not in previous)
 	var newIDs []string
 	for id := range currentIDs {
 		if !previousIDs[id] {
@@ -271,7 +329,6 @@ func (a *App) GetDiff() DiffResult {
 		}
 	}
 
-	// Find lost IDs (in previous but not in current)
 	var lostIDs []string
 	for id := range previousIDs {
 		if !currentIDs[id] {
@@ -289,12 +346,60 @@ func (a *App) GetDiff() DiffResult {
 	return result
 }
 
-func (a *App) GetStats() Stats {
-	var stats Stats
+// --- Notifications ---
 
-	a.db.QueryRow("SELECT COUNT(*) FROM users").Scan(&stats.TotalFollowing)
-	a.db.QueryRow("SELECT COALESCE(MAX(created_at), '') FROM fetch_logs").Scan(&stats.LastFetchAt)
-	a.db.QueryRow("SELECT COUNT(*) FROM fetch_logs").Scan(&stats.TotalFetches)
+func (a *App) notifyChanges(sourceUserId, accountUsername string, currentUsers []gen.User) {
+	previousIDs, err := GetPreviousFollowingIDs(a.db, sourceUserId)
+	if err != nil {
+		log.Printf("Warning: failed to get previous snapshot: %v", err)
+		return
+	}
+	if previousIDs == nil {
+		return
+	}
 
-	return stats
+	currentIDs := make(map[string]bool)
+	for _, u := range currentUsers {
+		currentIDs[u.Id] = true
+	}
+
+	var newUsers []string
+	for _, u := range currentUsers {
+		if !previousIDs[u.Id] {
+			newUsers = append(newUsers, "@"+u.Username)
+		}
+	}
+
+	var lostIDs []string
+	for id := range previousIDs {
+		if !currentIDs[id] {
+			lostIDs = append(lostIDs, id)
+		}
+	}
+
+	title := fmt.Sprintf("@%s Following Tracker", accountUsername)
+
+	if len(newUsers) > 0 {
+		msg := fmt.Sprintf("New: %s", strings.Join(newUsers, ", "))
+		if err := beeep.Notify(title, msg, ""); err != nil {
+			log.Printf("Notification error: %v", err)
+		}
+	}
+
+	if len(lostIDs) > 0 {
+		var lostNames []string
+		for _, id := range lostIDs {
+			var username string
+			err := a.db.QueryRow("SELECT username FROM users WHERE id = ?", id).Scan(&username)
+			if err == nil {
+				lostNames = append(lostNames, "@"+username)
+			} else {
+				lostNames = append(lostNames, id)
+			}
+		}
+		msg := fmt.Sprintf("Lost: %s", strings.Join(lostNames, ", "))
+		if err := beeep.Notify(title, msg, ""); err != nil {
+			log.Printf("Notification error: %v", err)
+		}
+	}
 }

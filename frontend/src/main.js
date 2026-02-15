@@ -1,5 +1,108 @@
 let allUsers = [];
 
+// --- Account management ---
+
+async function loadAccounts() {
+    try {
+        const accounts = await window.go.main.App.GetAccounts();
+        const selected = await window.go.main.App.GetSelectedAccount();
+        const select = document.getElementById('account-select');
+
+        if (!accounts || accounts.length === 0) {
+            select.innerHTML = '<option value="">No accounts</option>';
+            return;
+        }
+
+        select.innerHTML = accounts.map(a =>
+            `<option value="${a.user_id}" ${a.user_id === selected ? 'selected' : ''}>@${escapeHtml(a.username)}</option>`
+        ).join('');
+    } catch (err) {
+        console.error('Error loading accounts:', err);
+    }
+}
+
+async function switchAccount(userID) {
+    if (!userID) return;
+    await window.go.main.App.SelectAccount(userID);
+    await loadData();
+    if (document.getElementById('tab-changes').classList.contains('active')) {
+        await loadDiff();
+    }
+}
+
+async function addAccount() {
+    const usernameInput = document.getElementById('new-username');
+    const bearerInput = document.getElementById('new-bearer');
+    const btn = document.getElementById('add-account-btn');
+    const username = usernameInput.value.trim().replace(/^@/, '');
+    const bearer = bearerInput.value.trim();
+
+    if (!username || !bearer) return;
+
+    btn.disabled = true;
+    btn.textContent = 'Adding...';
+
+    try {
+        await window.go.main.App.AddNewAccount(username, bearer);
+        usernameInput.value = '';
+        bearerInput.value = '';
+        await loadAccounts();
+        await loadAccountList();
+        await loadData();
+    } catch (err) {
+        alert('Error adding account: ' + err);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Add Account';
+    }
+}
+
+async function removeAccount(userID) {
+    if (!confirm('Remove this account?')) return;
+    try {
+        await window.go.main.App.RemoveAccountByID(userID);
+        await loadAccounts();
+        await loadAccountList();
+        await loadData();
+    } catch (err) {
+        alert('Error removing account: ' + err);
+    }
+}
+
+function toggleAccountManager() {
+    const modal = document.getElementById('account-modal');
+    const isVisible = modal.classList.contains('visible');
+    if (isVisible) {
+        modal.classList.remove('visible');
+    } else {
+        modal.classList.add('visible');
+        loadAccountList();
+    }
+}
+
+async function loadAccountList() {
+    try {
+        const accounts = await window.go.main.App.GetAccounts();
+        const list = document.getElementById('account-list');
+
+        if (!accounts || accounts.length === 0) {
+            list.innerHTML = '<div class="no-accounts">No accounts added yet.</div>';
+            return;
+        }
+
+        list.innerHTML = accounts.map(a => `
+            <div class="account-item">
+                <span>@${escapeHtml(a.username)}</span>
+                <button onclick="removeAccount('${a.user_id}')" class="remove-btn">Remove</button>
+            </div>
+        `).join('');
+    } catch (err) {
+        console.error('Error loading account list:', err);
+    }
+}
+
+// --- Data loading ---
+
 async function loadData() {
     try {
         const users = await window.go.main.App.GetFollowingList();
@@ -192,6 +295,8 @@ function renderDiffCard(u) {
     `;
 }
 
+// --- Utilities ---
+
 function formatNumber(n) {
     if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
     if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
@@ -205,11 +310,13 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Initial load
-document.addEventListener('DOMContentLoaded', () => {
-    // Wait a moment for Wails bindings to be ready
-    setTimeout(loadData, 500);
+// --- Initial load ---
 
-    // Refresh data every 5 minutes
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(async () => {
+        await loadAccounts();
+        await loadData();
+    }, 500);
+
     setInterval(loadData, 5 * 60 * 1000);
 });
