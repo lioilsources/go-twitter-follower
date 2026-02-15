@@ -7,7 +7,10 @@ toolchain go1.24.5
 require (
 	github.com/deepmap/oapi-codegen v1.12.4
 	github.com/dghubble/oauth1 v0.7.2
+	github.com/gen2brain/beeep v0.11.2
 	github.com/joho/godotenv v1.5.1
+	github.com/wailsapp/wails/v2 v2.11.0
+	modernc.org/sqlite v1.45.0
 )
 
 require (
@@ -16,7 +19,6 @@ require (
 	github.com/bep/debounce v1.2.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/esiqveland/notify v0.13.3 // indirect
-	github.com/gen2brain/beeep v0.11.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
@@ -46,7 +48,6 @@ require (
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/wailsapp/go-webview2 v1.0.22 // indirect
 	github.com/wailsapp/mimetype v1.4.1 // indirect
-	github.com/wailsapp/wails/v2 v2.11.0 // indirect
 	golang.org/x/crypto v0.33.0 // indirect
 	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546 // indirect
 	golang.org/x/net v0.35.0 // indirect
@@ -55,5 +56,4 @@ require (
 	modernc.org/libc v1.67.6 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.45.0 // indirect
 )

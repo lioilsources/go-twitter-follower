@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"go-twitter-follower/gen"
@@ -188,6 +189,97 @@ func GetPreviousFollowingIDs(db *sql.DB, sourceUserId string) (map[string]bool, 
 		ids[id] = true
 	}
 	return ids, nil
+}
+
+// GetSnapshotTimestamps returns all distinct snapshot timestamps for a source user, newest first.
+func GetSnapshotTimestamps(db *sql.DB, sourceUserId string) ([]string, error) {
+	rows, err := db.Query(`
+		SELECT DISTINCT fetched_at FROM following_snapshots
+		WHERE source_user_id = ?
+		ORDER BY fetched_at DESC
+	`, sourceUserId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var timestamps []string
+	for rows.Next() {
+		var ts string
+		if err := rows.Scan(&ts); err != nil {
+			return nil, err
+		}
+		timestamps = append(timestamps, ts)
+	}
+	return timestamps, nil
+}
+
+// GetSnapshotUserIDs returns target user IDs for a specific snapshot timestamp.
+func GetSnapshotUserIDs(db *sql.DB, sourceUserId, fetchedAt string) (map[string]bool, error) {
+	rows, err := db.Query(`
+		SELECT target_user_id FROM following_snapshots
+		WHERE source_user_id = ? AND fetched_at = ?
+	`, sourceUserId, fetchedAt)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	ids := make(map[string]bool)
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		ids[id] = true
+	}
+	return ids, nil
+}
+
+// GetUsersByIDs returns FollowingUser records for a list of user IDs.
+func GetUsersByIDs(db *sql.DB, ids []string) ([]FollowingUser, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	placeholders := make([]string, len(ids))
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		placeholders[i] = "?"
+		args[i] = id
+	}
+
+	query := fmt.Sprintf(`
+		SELECT id, username, COALESCE(name, ''), COALESCE(description, ''),
+			COALESCE(followers_count, 0), COALESCE(following_count, 0),
+			COALESCE(tweet_count, 0), COALESCE(listed_count, 0),
+			COALESCE(verified, 0), COALESCE(verified_type, ''),
+			COALESCE(profile_image_url, ''), COALESCE(location, ''),
+			COALESCE(created_at, ''), COALESCE(updated_at, '')
+		FROM users WHERE id IN (%s)
+		ORDER BY followers_count DESC
+	`, strings.Join(placeholders, ","))
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []FollowingUser
+	for rows.Next() {
+		var u FollowingUser
+		var verified int
+		if err := rows.Scan(&u.Id, &u.Username, &u.Name, &u.Description,
+			&u.FollowersCount, &u.FollowingCount, &u.TweetCount, &u.ListedCount,
+			&verified, &u.VerifiedType, &u.ProfileImageUrl, &u.Location,
+			&u.CreatedAt, &u.UpdatedAt); err != nil {
+			continue
+		}
+		u.Verified = verified == 1
+		users = append(users, u)
+	}
+	return users, nil
 }
 
 func LogFetch(db *sql.DB, endpoint, userId string, statusCode int) {

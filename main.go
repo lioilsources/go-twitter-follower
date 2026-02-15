@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/joho/godotenv"
 	"github.com/wailsapp/wails/v2"
@@ -31,9 +32,18 @@ type Config struct {
 }
 
 func GetConfig() *Config {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
+	// Try loading .env from current dir, then from executable's dir
+	if err := godotenv.Load(); err != nil {
+		// Try relative to executable location
+		if exePath, exeErr := os.Executable(); exeErr == nil {
+			exeDir := filepath.Dir(exePath)
+			// For macOS .app bundles, go up from Contents/MacOS/
+			for _, rel := range []string{".env", "../../.env", "../../../.env"} {
+				if godotenv.Load(filepath.Join(exeDir, rel)) == nil {
+					break
+				}
+			}
+		}
 	}
 
 	return &Config{

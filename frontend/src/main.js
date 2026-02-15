@@ -100,12 +100,96 @@ async function fetchNow() {
         const result = await window.go.main.App.FetchNow();
         console.log(result);
         await loadData();
+        await loadDiff();
     } catch (err) {
         console.error('Error fetching:', err);
     } finally {
         btn.disabled = false;
         btn.textContent = 'Fetch Now';
     }
+}
+
+// --- Tab switching ---
+
+function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+
+    document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+
+    if (tab === 'changes') {
+        loadDiff();
+    }
+}
+
+// --- Diff view ---
+
+async function loadDiff() {
+    try {
+        const diff = await window.go.main.App.GetDiff();
+
+        const meta = document.getElementById('diff-meta');
+        const newList = document.getElementById('diff-new-list');
+        const lostList = document.getElementById('diff-lost-list');
+
+        const hasNew = diff.new_users && diff.new_users.length > 0;
+        const hasLost = diff.lost_users && diff.lost_users.length > 0;
+
+        if (!hasNew && !hasLost) {
+            meta.textContent = diff.fetched_at
+                ? 'No changes since last fetch'
+                : 'Need at least 2 fetches to show changes';
+            newList.innerHTML = '';
+            lostList.innerHTML = '';
+            document.getElementById('diff-new').style.display = 'none';
+            document.getElementById('diff-lost').style.display = 'none';
+            return;
+        }
+
+        meta.textContent = 'Last compared: ' + new Date(diff.fetched_at).toLocaleString();
+
+        if (hasNew) {
+            document.getElementById('diff-new').style.display = 'block';
+            document.querySelector('.diff-new-header').textContent = `New Following (${diff.new_users.length})`;
+            newList.innerHTML = diff.new_users.map(renderDiffCard).join('');
+        } else {
+            document.getElementById('diff-new').style.display = 'none';
+        }
+
+        if (hasLost) {
+            document.getElementById('diff-lost').style.display = 'block';
+            document.querySelector('.diff-lost-header').textContent = `Unfollowed (${diff.lost_users.length})`;
+            lostList.innerHTML = diff.lost_users.map(renderDiffCard).join('');
+        } else {
+            document.getElementById('diff-lost').style.display = 'none';
+        }
+    } catch (err) {
+        console.error('Error loading diff:', err);
+        document.getElementById('diff-meta').textContent = 'Error loading changes';
+    }
+}
+
+function renderDiffCard(u) {
+    return `
+        <div class="diff-card">
+            <div class="diff-card-left">
+                ${u.profile_image_url
+                    ? `<img class="avatar" src="${u.profile_image_url}" alt="" loading="lazy">`
+                    : '<div class="avatar"></div>'}
+                <div class="user-cell">
+                    <span class="user-name">
+                        ${escapeHtml(u.name)}${u.verified ? '<span class="verified-badge">&#x2713;</span>' : ''}
+                    </span>
+                    <span class="user-handle">@${escapeHtml(u.username)}</span>
+                </div>
+            </div>
+            <div class="diff-card-stats">
+                <span>${formatNumber(u.followers_count)} followers</span>
+                <span>${formatNumber(u.tweet_count)} tweets</span>
+            </div>
+        </div>
+    `;
 }
 
 function formatNumber(n) {

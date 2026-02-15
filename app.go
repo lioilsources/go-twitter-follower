@@ -54,9 +54,17 @@ func (a *App) startup(ctx context.Context) {
 
 	a.config = GetConfig()
 
+	if a.config.BearerToken == "" || a.config.Username == "" {
+		log.Println("Warning: BEARER_TOKEN or TWITTER_USERNAME not set. Create a .env file with your credentials.")
+		a.db = InitDB()
+		return
+	}
+
 	client, err := NewAuthClient(a.config.BearerToken)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Error creating auth client: %v", err)
+		a.db = InitDB()
+		return
 	}
 	a.client = client
 
@@ -93,6 +101,10 @@ func (a *App) scheduler() {
 func (a *App) FetchNow() string {
 	a.mu.Lock()
 	defer a.mu.Unlock()
+
+	if a.client == nil {
+		return "Not configured. Add BEARER_TOKEN and TWITTER_USERNAME to .env file."
+	}
 
 	userId, err := ResolveUsername(a.client, a.config.Username)
 	if err != nil {
@@ -213,6 +225,68 @@ func (a *App) notifyChanges(sourceUserId string, currentUsers []gen.User) {
 			log.Printf("Notification error: %v", err)
 		}
 	}
+}
+
+type DiffResult struct {
+	NewUsers  []FollowingUser `json:"new_users"`
+	LostUsers []FollowingUser `json:"lost_users"`
+	FetchedAt string          `json:"fetched_at"`
+}
+
+func (a *App) GetDiff() DiffResult {
+	result := DiffResult{}
+
+	if a.config == nil || a.config.Username == "" {
+		return result
+	}
+
+	// Get source user ID from the latest snapshot
+	var sourceUserId string
+	err := a.db.QueryRow(`SELECT DISTINCT source_user_id FROM following_snapshots LIMIT 1`).Scan(&sourceUserId)
+	if err != nil {
+		return result
+	}
+
+	timestamps, err := GetSnapshotTimestamps(a.db, sourceUserId)
+	if err != nil || len(timestamps) < 2 {
+		return result
+	}
+
+	result.FetchedAt = timestamps[0]
+
+	currentIDs, err := GetSnapshotUserIDs(a.db, sourceUserId, timestamps[0])
+	if err != nil {
+		return result
+	}
+	previousIDs, err := GetSnapshotUserIDs(a.db, sourceUserId, timestamps[1])
+	if err != nil {
+		return result
+	}
+
+	// Find new IDs (in current but not in previous)
+	var newIDs []string
+	for id := range currentIDs {
+		if !previousIDs[id] {
+			newIDs = append(newIDs, id)
+		}
+	}
+
+	// Find lost IDs (in previous but not in current)
+	var lostIDs []string
+	for id := range previousIDs {
+		if !currentIDs[id] {
+			lostIDs = append(lostIDs, id)
+		}
+	}
+
+	if len(newIDs) > 0 {
+		result.NewUsers, _ = GetUsersByIDs(a.db, newIDs)
+	}
+	if len(lostIDs) > 0 {
+		result.LostUsers, _ = GetUsersByIDs(a.db, lostIDs)
+	}
+
+	return result
 }
 
 func (a *App) GetStats() Stats {

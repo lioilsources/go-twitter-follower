@@ -19,38 +19,63 @@
             </div>
         </header>
 
-        <div class="controls">
-            <input type="text" id="search" placeholder="Search by username, name, or description..." oninput="filterTable()">
-            <select id="sort-by" onchange="sortTable()">
-                <option value="followers_count">Followers</option>
-                <option value="following_count">Following</option>
-                <option value="tweet_count">Tweets</option>
-                <option value="username">Username</option>
-                <option value="name">Name</option>
-            </select>
-            <select id="sort-dir" onchange="sortTable()">
-                <option value="desc">Descending</option>
-                <option value="asc">Ascending</option>
-            </select>
+        <nav class="tabs">
+            <button class="tab active" onclick="switchTab('following')">Following</button>
+            <button class="tab" onclick="switchTab('changes')">Changes</button>
+        </nav>
+
+        <!-- Following Tab -->
+        <div id="tab-following" class="tab-content active">
+            <div class="controls">
+                <input type="text" id="search" placeholder="Search by username, name, or description..." oninput="filterTable()">
+                <select id="sort-by" onchange="sortTable()">
+                    <option value="followers_count">Followers</option>
+                    <option value="following_count">Following</option>
+                    <option value="tweet_count">Tweets</option>
+                    <option value="username">Username</option>
+                    <option value="name">Name</option>
+                </select>
+                <select id="sort-dir" onchange="sortTable()">
+                    <option value="desc">Descending</option>
+                    <option value="asc">Ascending</option>
+                </select>
+            </div>
+
+            <div id="table-container">
+                <table id="following-table">
+                    <thead>
+                        <tr>
+                            <th class="col-avatar"></th>
+                            <th class="col-user">User</th>
+                            <th class="col-desc">Description</th>
+                            <th class="col-num" onclick="sortBy('followers_count')">Followers</th>
+                            <th class="col-num" onclick="sortBy('following_count')">Following</th>
+                            <th class="col-num" onclick="sortBy('tweet_count')">Tweets</th>
+                            <th class="col-loc">Location</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-body">
+                        <tr><td colspan="7" class="loading">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
-        <div id="table-container">
-            <table id="following-table">
-                <thead>
-                    <tr>
-                        <th class="col-avatar"></th>
-                        <th class="col-user">User</th>
-                        <th class="col-desc">Description</th>
-                        <th class="col-num" onclick="sortBy('followers_count')">Followers</th>
-                        <th class="col-num" onclick="sortBy('following_count')">Following</th>
-                        <th class="col-num" onclick="sortBy('tweet_count')">Tweets</th>
-                        <th class="col-loc">Location</th>
-                    </tr>
-                </thead>
-                <tbody id="table-body">
-                    <tr><td colspan="7" class="loading">Loading...</td></tr>
-                </tbody>
-            </table>
+        <!-- Changes Tab -->
+        <div id="tab-changes" class="tab-content">
+            <div id="diff-container">
+                <div id="diff-meta"></div>
+                <div id="diff-sections">
+                    <div id="diff-new" class="diff-section">
+                        <h3 class="diff-header diff-new-header">New Following</h3>
+                        <div id="diff-new-list" class="diff-list"></div>
+                    </div>
+                    <div id="diff-lost" class="diff-section">
+                        <h3 class="diff-header diff-lost-header">Unfollowed</h3>
+                        <div id="diff-lost-list" class="diff-list"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
