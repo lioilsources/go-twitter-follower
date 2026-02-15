@@ -11,6 +11,7 @@ import (
 
 	"go-twitter-follower/gen"
 
+	"github.com/energye/systray"
 	"github.com/gen2brain/beeep"
 )
 
@@ -20,6 +21,7 @@ type App struct {
 	config            *Config
 	mu                sync.Mutex
 	selectedAccountID string
+	trayLastFetchItem *systray.MenuItem
 }
 
 type FollowingUser struct {
@@ -86,11 +88,13 @@ func (a *App) startup(ctx context.Context) {
 		}
 	}
 
-	// Start background scheduler
+	// Start systray and background scheduler
+	go a.initSystray()
 	go a.scheduler()
 }
 
 func (a *App) shutdown(ctx context.Context) {
+	systray.Quit()
 	if a.db != nil {
 		a.db.Close()
 	}
@@ -224,6 +228,8 @@ func (a *App) fetchForAccount(acct Account) string {
 	LogFetch(a.db, "GET /2/users/:id/following", acct.UserID, 200)
 
 	a.notifyChanges(acct.UserID, acct.Username, all)
+
+	a.updateTrayLastFetch()
 
 	msg := fmt.Sprintf("Fetched %d for @%s at %s", len(all), acct.Username, time.Now().Format("15:04:05"))
 	log.Println(msg)

@@ -66,11 +66,12 @@ func main() {
 	}
 
 	err := wails.Run(&options.App{
-		Title:     "Twitter Following Tracker",
-		Width:     1024,
-		Height:    700,
-		MinWidth:  800,
-		MinHeight: 500,
+		Title:            "Twitter Following Tracker",
+		Width:            1024,
+		Height:           700,
+		MinWidth:         800,
+		MinHeight:        500,
+		HideWindowOnClose: true,
 		AssetServer: &assetserver.Options{
 			Assets: frontendFS,
 		},

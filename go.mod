@@ -7,6 +7,7 @@ toolchain go1.24.5
 require (
 	github.com/deepmap/oapi-codegen v1.12.4
 	github.com/dghubble/oauth1 v0.7.2
+	github.com/energye/systray v1.0.3
 	github.com/gen2brain/beeep v0.11.2
 	github.com/joho/godotenv v1.5.1
 	github.com/wailsapp/wails/v2 v2.11.0
