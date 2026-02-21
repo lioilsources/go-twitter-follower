@@ -11,7 +11,6 @@ import (
 
 	"go-twitter-follower/gen"
 
-	"github.com/energye/systray"
 	"github.com/gen2brain/beeep"
 )
 
@@ -21,7 +20,6 @@ type App struct {
 	config            *Config
 	mu                sync.Mutex
 	selectedAccountID string
-	trayLastFetchItem *systray.MenuItem
 }
 
 type FollowingUser struct {
@@ -88,13 +86,11 @@ func (a *App) startup(ctx context.Context) {
 		}
 	}
 
-	// Start systray and background scheduler
-	go a.initSystray()
+	// Start background scheduler
 	go a.scheduler()
 }
 
 func (a *App) shutdown(ctx context.Context) {
-	systray.Quit()
 	if a.db != nil {
 		a.db.Close()
 	}
@@ -208,6 +204,7 @@ func (a *App) fetchForAccount(acct Account) string {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
+	log.Printf("[scheduler] Fetching for @%s (user_id=%s, token=%s...)", acct.Username, acct.UserID, acct.BearerToken[:min(8, len(acct.BearerToken))])
 	client, err := NewAuthClient(acct.BearerToken)
 	if err != nil {
 		msg := fmt.Sprintf("Error for @%s: %v", acct.Username, err)
@@ -215,7 +212,12 @@ func (a *App) fetchForAccount(acct Account) string {
 		return msg
 	}
 
-	all := FetchAllFollowing(client, acct.UserID)
+	all, err := FetchAllFollowing(client, acct.UserID)
+	if err != nil {
+		msg := fmt.Sprintf("Fetch error for @%s: %v", acct.Username, err)
+		log.Println(msg)
+		return msg
+	}
 
 	for _, user := range all {
 		if err := UpsertUser(a.db, user); err != nil {
@@ -228,8 +230,6 @@ func (a *App) fetchForAccount(acct Account) string {
 	LogFetch(a.db, "GET /2/users/:id/following", acct.UserID, 200)
 
 	a.notifyChanges(acct.UserID, acct.Username, all)
-
-	a.updateTrayLastFetch()
 
 	msg := fmt.Sprintf("Fetched %d for @%s at %s", len(all), acct.Username, time.Now().Format("15:04:05"))
 	log.Println(msg)

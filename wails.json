@@ -3,6 +3,7 @@
   "name": "twitter-following-tracker",
   "outputfilename": "twitter-following-tracker",
   "frontend:dir": "frontend",
+  "reloaddirs": "frontend",
   "author": {
     "name": ""
   }

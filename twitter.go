@@ -49,7 +49,7 @@ func ResolveUsername(client *gen.ClientWithResponses, username string) (string, 
 	return res.JSON200.Data.Id, nil
 }
 
-func GetFollowing(client *gen.ClientWithResponses, userId string, pagination_token *string) (*[]gen.User, *string) {
+func GetFollowing(client *gen.ClientWithResponses, userId string, pagination_token *string) (*[]gen.User, *string, error) {
 	userFields := gen.UserFieldsParameter{
 		"public_metrics",
 		"description",
@@ -70,41 +70,56 @@ func GetFollowing(client *gen.ClientWithResponses, userId string, pagination_tok
 		params.PaginationToken = pagination_token
 	}
 
+	log.Printf("[fetch] GET /2/users/%s/following (pagination: %v)", userId, pagination_token != nil)
 	res, err := client.UsersIdFollowingWithResponse(context.Background(), userId, params)
 	if err != nil {
-		log.Fatal(fmt.Errorf("%w", err))
+		return nil, nil, fmt.Errorf("API request failed: %w", err)
 	}
+	log.Printf("[fetch] Response: HTTP %d (%d bytes)", res.StatusCode(), len(res.Body))
 	if res.StatusCode() != http.StatusOK {
-		log.Fatal(*res.JSONDefault.Status, ": ", *res.JSONDefault.Detail)
+		log.Printf("[fetch] Error body: %s", string(res.Body))
+		if res.JSONDefault != nil && res.JSONDefault.Status != nil && res.JSONDefault.Detail != nil {
+			return nil, nil, fmt.Errorf("API error %d: %s: %s", res.StatusCode(), *res.JSONDefault.Status, *res.JSONDefault.Detail)
+		}
+		return nil, nil, fmt.Errorf("API error %d: %s", res.StatusCode(), string(res.Body))
+	}
+	if res.JSON200 == nil || res.JSON200.Data == nil {
+		return nil, nil, fmt.Errorf("API returned empty response")
 	}
 
 	next_token := res.JSON200.Meta.NextToken
-	return res.JSON200.Data, next_token
+	return res.JSON200.Data, next_token, nil
 }
 
 // FetchAllFollowing fetches the complete following list with pagination and rate limiting.
-func FetchAllFollowing(client *gen.ClientWithResponses, userId string) []gen.User {
+func FetchAllFollowing(client *gen.ClientWithResponses, userId string) ([]gen.User, error) {
 	all := make([]gen.User, 0)
 
 	// first call without rate limit delay
-	f, pagination_token := GetFollowing(client, userId, nil)
+	f, pagination_token, err := GetFollowing(client, userId, nil)
+	if err != nil {
+		return nil, err
+	}
 	all = append(all, *f...)
-	fmt.Printf("[%s] Counting followings: %d\n", time.Now().Format("2006-01-02 15:04:05"), len(all))
+	log.Printf("Counting followings: %d", len(all))
 
 	if pagination_token == nil {
-		return all
+		return all, nil
 	}
 
 	rate_limiter := time.Tick(rate_limit)
 	for range rate_limiter {
-		f, pagination_token = GetFollowing(client, userId, pagination_token)
+		f, pagination_token, err = GetFollowing(client, userId, pagination_token)
+		if err != nil {
+			return nil, err
+		}
 		all = append(all, *f...)
-		fmt.Printf("[%s] Counting followings: %d\n", time.Now().Format("2006-01-02 15:04:05"), len(all))
+		log.Printf("Counting followings: %d", len(all))
 
 		if pagination_token == nil {
 			break
 		}
 	}
 
-	return all
+	return all, nil
 }
