@@ -1,2 +1,17 @@
 .env
 res/
+
+# Build output
+build/bin/
+go-twitter-follower
+
+# SQLite database
+data.db
+data.db-shm
+data.db-wal
+
+# Wails auto-generated bindings
+frontend/wailsjs/
+
+# macOS
+.DS_Store
