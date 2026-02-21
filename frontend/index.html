@@ -27,7 +27,6 @@
 
         <nav class="tabs">
             <button class="tab active" onclick="switchTab('following')">Following</button>
-            <button class="tab" onclick="switchTab('changes')">Changes</button>
             <button class="tab" onclick="switchTab('lists')">Lists</button>
         </nav>
 
@@ -68,22 +67,6 @@
             </div>
         </div>
 
-        <!-- Changes Tab -->
-        <div id="tab-changes" class="tab-content">
-            <div id="diff-container">
-                <div id="diff-meta"></div>
-                <div id="diff-sections">
-                    <div id="diff-new" class="diff-section">
-                        <h3 class="diff-header diff-new-header">New Following</h3>
-                        <div id="diff-new-list" class="diff-list"></div>
-                    </div>
-                    <div id="diff-lost" class="diff-section">
-                        <h3 class="diff-header diff-lost-header">Unfollowed</h3>
-                        <div id="diff-lost-list" class="diff-list"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
         <!-- Lists Tab -->
         <div id="tab-lists" class="tab-content">
             <div id="lists-grid-view">
@@ -110,6 +93,7 @@
                                 <th class="col-num">Following</th>
                                 <th class="col-num">Tweets</th>
                                 <th class="col-loc">Location</th>
+                                <th class="col-lists">Lists</th>
                             </tr>
                         </thead>
                         <tbody id="list-members-body">

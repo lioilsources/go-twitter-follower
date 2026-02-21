@@ -25,9 +25,6 @@ async function switchAccount(userID) {
     if (!userID) return;
     await window.go.main.App.SelectAccount(userID);
     await loadData();
-    if (document.getElementById('tab-changes').classList.contains('active')) {
-        await loadDiff();
-    }
 }
 
 async function addAccount() {
@@ -126,7 +123,7 @@ function renderTable(users) {
     const tbody = document.getElementById('table-body');
 
     if (!users || users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="loading">No data yet. Fetching...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="loading">No data yet. Click Fetch Now to start.</td></tr>';
         return;
     }
 
@@ -200,10 +197,16 @@ async function fetchNow() {
     btn.textContent = 'Fetching...';
 
     try {
-        const result = await window.go.main.App.FetchNow();
-        console.log(result);
-        await loadData();
-        await loadDiff();
+        const isListsTab = document.getElementById('tab-lists').classList.contains('active');
+        if (isListsTab) {
+            const result = await window.go.main.App.FetchListsNow();
+            console.log(result);
+            await loadLists();
+        } else {
+            const result = await window.go.main.App.FetchNow();
+            console.log(result);
+            await loadData();
+        }
     } catch (err) {
         console.error('Error fetching:', err);
     } finally {
@@ -221,9 +224,7 @@ function switchTab(tab) {
     document.querySelector(`.tab[onclick="switchTab('${tab}')"]`).classList.add('active');
     document.getElementById('tab-' + tab).classList.add('active');
 
-    if (tab === 'changes') {
-        loadDiff();
-    } else if (tab === 'lists') {
+    if (tab === 'lists') {
         loadLists();
     }
 }
@@ -265,7 +266,7 @@ async function viewListMembers(listId, listName) {
     document.getElementById('list-members-view').style.display = '';
     document.getElementById('list-members-title').textContent = listName;
     document.getElementById('list-members-body').innerHTML =
-        '<tr><td colspan="7" class="loading">Loading members...</td></tr>';
+        '<tr><td colspan="8" class="loading">Loading members...</td></tr>';
     document.getElementById('list-members-search').value = '';
 
     try {
@@ -275,7 +276,7 @@ async function viewListMembers(listId, listName) {
     } catch (err) {
         console.error('Error loading list members:', err);
         document.getElementById('list-members-body').innerHTML =
-            '<tr><td colspan="7" class="loading">Error loading members</td></tr>';
+            '<tr><td colspan="8" class="loading">Error loading members</td></tr>';
     }
 }
 
@@ -285,10 +286,15 @@ function backToLists() {
     allListMembers = [];
 }
 
+function renderListBadges(lists) {
+    if (!lists || lists.length === 0) return '';
+    return lists.map(l => `<span class="list-badge">${escapeHtml(l)}</span>`).join(' ');
+}
+
 function renderListMembers(users) {
     const tbody = document.getElementById('list-members-body');
     if (!users || users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="loading">No members</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="loading">No members</td></tr>';
         return;
     }
     tbody.innerHTML = users.map(u => `
@@ -309,6 +315,7 @@ function renderListMembers(users) {
             <td class="num-cell">${formatNumber(u.following_count)}</td>
             <td class="num-cell">${formatNumber(u.tweet_count)}</td>
             <td class="loc-cell">${escapeHtml(u.location)}</td>
+            <td class="lists-cell">${renderListBadges(u.lists)}</td>
         </tr>
     `).join('');
 }
@@ -321,75 +328,6 @@ function filterListMembers() {
         (u.description && u.description.toLowerCase().includes(query))
     );
     renderListMembers(filtered);
-}
-
-// --- Diff view ---
-
-async function loadDiff() {
-    try {
-        const diff = await window.go.main.App.GetDiff();
-
-        const meta = document.getElementById('diff-meta');
-        const newList = document.getElementById('diff-new-list');
-        const lostList = document.getElementById('diff-lost-list');
-
-        const hasNew = diff.new_users && diff.new_users.length > 0;
-        const hasLost = diff.lost_users && diff.lost_users.length > 0;
-
-        if (!hasNew && !hasLost) {
-            meta.textContent = diff.fetched_at
-                ? 'No changes since last fetch'
-                : 'Need at least 2 fetches to show changes';
-            newList.innerHTML = '';
-            lostList.innerHTML = '';
-            document.getElementById('diff-new').style.display = 'none';
-            document.getElementById('diff-lost').style.display = 'none';
-            return;
-        }
-
-        meta.textContent = 'Last compared: ' + new Date(diff.fetched_at).toLocaleString();
-
-        if (hasNew) {
-            document.getElementById('diff-new').style.display = 'block';
-            document.querySelector('.diff-new-header').textContent = `New Following (${diff.new_users.length})`;
-            newList.innerHTML = diff.new_users.map(renderDiffCard).join('');
-        } else {
-            document.getElementById('diff-new').style.display = 'none';
-        }
-
-        if (hasLost) {
-            document.getElementById('diff-lost').style.display = 'block';
-            document.querySelector('.diff-lost-header').textContent = `Unfollowed (${diff.lost_users.length})`;
-            lostList.innerHTML = diff.lost_users.map(renderDiffCard).join('');
-        } else {
-            document.getElementById('diff-lost').style.display = 'none';
-        }
-    } catch (err) {
-        console.error('Error loading diff:', err);
-        document.getElementById('diff-meta').textContent = 'Error loading changes';
-    }
-}
-
-function renderDiffCard(u) {
-    return `
-        <div class="diff-card">
-            <div class="diff-card-left">
-                ${u.profile_image_url
-                    ? `<img class="avatar" src="${u.profile_image_url}" alt="" loading="lazy">`
-                    : '<div class="avatar"></div>'}
-                <div class="user-cell">
-                    <span class="user-name">
-                        ${escapeHtml(u.name)}${u.verified ? '<span class="verified-badge">&#x2713;</span>' : ''}
-                    </span>
-                    <span class="user-handle">@${escapeHtml(u.username)}</span>
-                </div>
-            </div>
-            <div class="diff-card-stats">
-                <span>${formatNumber(u.followers_count)} followers</span>
-                <span>${formatNumber(u.tweet_count)} tweets</span>
-            </div>
-        </div>
-    `;
 }
 
 // --- Utilities ---
@@ -414,6 +352,4 @@ document.addEventListener('DOMContentLoaded', () => {
         await loadAccounts();
         await loadData();
     }, 500);
-
-    setInterval(loadData, 5 * 60 * 1000);
 });

@@ -5,13 +5,10 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"strings"
 	"sync"
 	"time"
 
 	"go-twitter-follower/gen"
-
-	"github.com/gen2brain/beeep"
 )
 
 type App struct {
@@ -23,32 +20,27 @@ type App struct {
 }
 
 type FollowingUser struct {
-	Id              string `json:"id"`
-	Username        string `json:"username"`
-	Name            string `json:"name"`
-	Description     string `json:"description"`
-	FollowersCount  int    `json:"followers_count"`
-	FollowingCount  int    `json:"following_count"`
-	TweetCount      int    `json:"tweet_count"`
-	ListedCount     int    `json:"listed_count"`
-	Verified        bool   `json:"verified"`
-	VerifiedType    string `json:"verified_type"`
-	ProfileImageUrl string `json:"profile_image_url"`
-	Location        string `json:"location"`
-	CreatedAt       string `json:"created_at"`
-	UpdatedAt       string `json:"updated_at"`
+	Id              string   `json:"id"`
+	Username        string   `json:"username"`
+	Name            string   `json:"name"`
+	Description     string   `json:"description"`
+	FollowersCount  int      `json:"followers_count"`
+	FollowingCount  int      `json:"following_count"`
+	TweetCount      int      `json:"tweet_count"`
+	ListedCount     int      `json:"listed_count"`
+	Verified        bool     `json:"verified"`
+	VerifiedType    string   `json:"verified_type"`
+	ProfileImageUrl string   `json:"profile_image_url"`
+	Location        string   `json:"location"`
+	CreatedAt       string   `json:"created_at"`
+	UpdatedAt       string   `json:"updated_at"`
+	Lists           []string `json:"lists,omitempty"`
 }
 
 type Stats struct {
 	TotalFollowing int    `json:"total_following"`
 	LastFetchAt    string `json:"last_fetch_at"`
 	TotalFetches   int    `json:"total_fetches"`
-}
-
-type DiffResult struct {
-	NewUsers  []FollowingUser `json:"new_users"`
-	LostUsers []FollowingUser `json:"lost_users"`
-	FetchedAt string          `json:"fetched_at"`
 }
 
 func NewApp() *App {
@@ -85,9 +77,6 @@ func (a *App) startup(ctx context.Context) {
 			a.selectedAccountID = accounts[0].UserID
 		}
 	}
-
-	// Start background scheduler
-	go a.scheduler()
 }
 
 func (a *App) shutdown(ctx context.Context) {
@@ -154,7 +143,7 @@ func (a *App) RemoveAccountByID(userID string) error {
 	return nil
 }
 
-// --- Lists ---
+// --- Lists (cache-aware) ---
 
 type TwitterList struct {
 	Id          string `json:"id"`
@@ -169,6 +158,15 @@ func (a *App) GetOwnedLists() []TwitterList {
 		return nil
 	}
 
+	if IsListCacheFresh(a.db, a.selectedAccountID) {
+		log.Printf("[cache] Lists cache fresh for %s, serving from cache", a.selectedAccountID)
+		return GetCachedLists(a.db, a.selectedAccountID)
+	}
+
+	return a.fetchAndCacheOwnedLists()
+}
+
+func (a *App) fetchAndCacheOwnedLists() []TwitterList {
 	acct, err := GetAccountByUserID(a.db, a.selectedAccountID)
 	if err != nil {
 		log.Printf("Error getting account: %v", err)
@@ -204,6 +202,11 @@ func (a *App) GetOwnedLists() []TwitterList {
 		}
 		result = append(result, tl)
 	}
+
+	if err := SaveListCache(a.db, a.selectedAccountID, result); err != nil {
+		log.Printf("Warning: failed to save list cache: %v", err)
+	}
+
 	return result
 }
 
@@ -212,6 +215,25 @@ func (a *App) GetListMembers(listId string) []FollowingUser {
 		return nil
 	}
 
+	if IsListMemberCacheFresh(a.db, listId) {
+		log.Printf("[cache] List members cache fresh for list %s, serving from cache", listId)
+		return a.getListMembersFromCache(listId)
+	}
+
+	return a.fetchAndCacheListMembers(listId)
+}
+
+func (a *App) getListMembersFromCache(listId string) []FollowingUser {
+	ids := GetCachedListMemberIDs(a.db, listId)
+	users, err := GetUsersByIDs(a.db, ids)
+	if err != nil {
+		log.Printf("Error getting cached list members: %v", err)
+		return nil
+	}
+	return a.enrichWithListNames(users)
+}
+
+func (a *App) fetchAndCacheListMembers(listId string) []FollowingUser {
 	acct, err := GetAccountByUserID(a.db, a.selectedAccountID)
 	if err != nil {
 		log.Printf("Error getting account: %v", err)
@@ -230,78 +252,47 @@ func (a *App) GetListMembers(listId string) []FollowingUser {
 		return nil
 	}
 
+	var userIDs []string
 	var result []FollowingUser
 	for _, u := range users {
 		if err := UpsertUser(a.db, u); err != nil {
 			log.Printf("Warning: failed to upsert user %s: %v", u.Id, err)
 		}
-		fu := FollowingUser{
-			Id:       u.Id,
-			Username: u.Username,
-			Name:     u.Name,
-		}
-		if u.Description != nil {
-			fu.Description = *u.Description
-		}
-		if u.PublicMetrics != nil {
-			fu.FollowersCount = u.PublicMetrics.FollowersCount
-			fu.FollowingCount = u.PublicMetrics.FollowingCount
-			fu.TweetCount = u.PublicMetrics.TweetCount
-			fu.ListedCount = u.PublicMetrics.ListedCount
-		}
-		if u.Verified != nil {
-			fu.Verified = *u.Verified
-		}
-		if u.VerifiedType != nil {
-			fu.VerifiedType = string(*u.VerifiedType)
-		}
-		if u.ProfileImageUrl != nil {
-			fu.ProfileImageUrl = *u.ProfileImageUrl
-		}
-		if u.Location != nil {
-			fu.Location = *u.Location
-		}
-		if u.CreatedAt != nil {
-			fu.CreatedAt = u.CreatedAt.Format("2006-01-02T15:04:05Z")
-		}
+		userIDs = append(userIDs, u.Id)
+		fu := genUserToFollowingUser(u)
 		result = append(result, fu)
 	}
-	return result
+
+	if err := SaveListMemberCache(a.db, listId, userIDs); err != nil {
+		log.Printf("Warning: failed to save list member cache: %v", err)
+	}
+
+	return a.enrichWithListNames(result)
 }
 
-// --- Scheduler & Fetching ---
-
-func (a *App) scheduler() {
-	a.FetchAllAccounts()
-
-	ticker := time.NewTicker(1 * time.Hour)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			a.FetchAllAccounts()
-		case <-a.ctx.Done():
-			return
+func (a *App) enrichWithListNames(users []FollowingUser) []FollowingUser {
+	if len(users) == 0 {
+		return users
+	}
+	ids := make([]string, len(users))
+	for i, u := range users {
+		ids[i] = u.Id
+	}
+	listMap := GetListNamesForUsers(a.db, a.selectedAccountID, ids)
+	if listMap == nil {
+		return users
+	}
+	for i := range users {
+		if names, ok := listMap[users[i].Id]; ok {
+			users[i].Lists = names
 		}
 	}
+	return users
 }
 
-func (a *App) FetchAllAccounts() string {
-	accounts, err := GetActiveAccounts(a.db)
-	if err != nil || len(accounts) == 0 {
-		return "No accounts configured."
-	}
+// --- Fetching (manual only, no scheduler) ---
 
-	var results []string
-	for _, acct := range accounts {
-		result := a.fetchForAccount(acct)
-		results = append(results, result)
-	}
-	return strings.Join(results, "\n")
-}
-
-// FetchNow fetches for the currently selected account (manual trigger from UI).
+// FetchNow fetches following for the currently selected account (manual trigger from UI).
 func (a *App) FetchNow() string {
 	if a.selectedAccountID == "" {
 		return "No account selected. Add an account first."
@@ -312,14 +303,38 @@ func (a *App) FetchNow() string {
 		return "Account not found."
 	}
 
-	return a.fetchForAccount(*acct)
+	return a.fetchFollowingForAccount(*acct)
 }
 
-func (a *App) fetchForAccount(acct Account) string {
+// FetchListsNow force-fetches owned lists + all members (bypasses cache).
+func (a *App) FetchListsNow() string {
+	if a.selectedAccountID == "" {
+		return "No account selected. Add an account first."
+	}
+
+	lists := a.fetchAndCacheOwnedLists()
+	if lists == nil {
+		return "Error fetching lists."
+	}
+
+	for _, l := range lists {
+		a.fetchAndCacheListMembers(l.Id)
+	}
+
+	return fmt.Sprintf("Fetched %d lists at %s", len(lists), time.Now().Format("15:04:05"))
+}
+
+func (a *App) fetchFollowingForAccount(acct Account) string {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
-	log.Printf("[scheduler] Fetching for @%s (user_id=%s, token=%s...)", acct.Username, acct.UserID, acct.BearerToken[:min(8, len(acct.BearerToken))])
+	if IsFollowingCacheFresh(a.db, acct.UserID) {
+		msg := fmt.Sprintf("Cache fresh for @%s, skipping API call", acct.Username)
+		log.Println(msg)
+		return msg
+	}
+
+	log.Printf("[fetch] Fetching for @%s (user_id=%s, token=%s...)", acct.Username, acct.UserID, acct.BearerToken[:min(8, len(acct.BearerToken))])
 	client, err := NewAuthClient(acct.BearerToken)
 	if err != nil {
 		msg := fmt.Sprintf("Error for @%s: %v", acct.Username, err)
@@ -343,8 +358,6 @@ func (a *App) fetchForAccount(acct Account) string {
 		log.Printf("Warning: failed to save snapshot: %v", err)
 	}
 	LogFetch(a.db, "GET /2/users/:id/following", acct.UserID, 200)
-
-	a.notifyChanges(acct.UserID, acct.Username, all)
 
 	msg := fmt.Sprintf("Fetched %d for @%s at %s", len(all), acct.Username, time.Now().Format("15:04:05"))
 	log.Println(msg)
@@ -421,106 +434,37 @@ func (a *App) GetStats() Stats {
 	return stats
 }
 
-func (a *App) GetDiff() DiffResult {
-	result := DiffResult{}
-	if a.selectedAccountID == "" {
-		return result
-	}
+// --- Helpers ---
 
-	timestamps, err := GetSnapshotTimestamps(a.db, a.selectedAccountID)
-	if err != nil || len(timestamps) < 2 {
-		return result
+func genUserToFollowingUser(u gen.User) FollowingUser {
+	fu := FollowingUser{
+		Id:       u.Id,
+		Username: u.Username,
+		Name:     u.Name,
 	}
-
-	result.FetchedAt = timestamps[0]
-
-	currentIDs, err := GetSnapshotUserIDs(a.db, a.selectedAccountID, timestamps[0])
-	if err != nil {
-		return result
+	if u.Description != nil {
+		fu.Description = *u.Description
 	}
-	previousIDs, err := GetSnapshotUserIDs(a.db, a.selectedAccountID, timestamps[1])
-	if err != nil {
-		return result
+	if u.PublicMetrics != nil {
+		fu.FollowersCount = u.PublicMetrics.FollowersCount
+		fu.FollowingCount = u.PublicMetrics.FollowingCount
+		fu.TweetCount = u.PublicMetrics.TweetCount
+		fu.ListedCount = u.PublicMetrics.ListedCount
 	}
-
-	var newIDs []string
-	for id := range currentIDs {
-		if !previousIDs[id] {
-			newIDs = append(newIDs, id)
-		}
+	if u.Verified != nil {
+		fu.Verified = *u.Verified
 	}
-
-	var lostIDs []string
-	for id := range previousIDs {
-		if !currentIDs[id] {
-			lostIDs = append(lostIDs, id)
-		}
+	if u.VerifiedType != nil {
+		fu.VerifiedType = string(*u.VerifiedType)
 	}
-
-	if len(newIDs) > 0 {
-		result.NewUsers, _ = GetUsersByIDs(a.db, newIDs)
+	if u.ProfileImageUrl != nil {
+		fu.ProfileImageUrl = *u.ProfileImageUrl
 	}
-	if len(lostIDs) > 0 {
-		result.LostUsers, _ = GetUsersByIDs(a.db, lostIDs)
+	if u.Location != nil {
+		fu.Location = *u.Location
 	}
-
-	return result
-}
-
-// --- Notifications ---
-
-func (a *App) notifyChanges(sourceUserId, accountUsername string, currentUsers []gen.User) {
-	previousIDs, err := GetPreviousFollowingIDs(a.db, sourceUserId)
-	if err != nil {
-		log.Printf("Warning: failed to get previous snapshot: %v", err)
-		return
+	if u.CreatedAt != nil {
+		fu.CreatedAt = u.CreatedAt.Format("2006-01-02T15:04:05Z")
 	}
-	if previousIDs == nil {
-		return
-	}
-
-	currentIDs := make(map[string]bool)
-	for _, u := range currentUsers {
-		currentIDs[u.Id] = true
-	}
-
-	var newUsers []string
-	for _, u := range currentUsers {
-		if !previousIDs[u.Id] {
-			newUsers = append(newUsers, "@"+u.Username)
-		}
-	}
-
-	var lostIDs []string
-	for id := range previousIDs {
-		if !currentIDs[id] {
-			lostIDs = append(lostIDs, id)
-		}
-	}
-
-	title := fmt.Sprintf("@%s Following Tracker", accountUsername)
-
-	if len(newUsers) > 0 {
-		msg := fmt.Sprintf("New: %s", strings.Join(newUsers, ", "))
-		if err := beeep.Notify(title, msg, ""); err != nil {
-			log.Printf("Notification error: %v", err)
-		}
-	}
-
-	if len(lostIDs) > 0 {
-		var lostNames []string
-		for _, id := range lostIDs {
-			var username string
-			err := a.db.QueryRow("SELECT username FROM users WHERE id = ?", id).Scan(&username)
-			if err == nil {
-				lostNames = append(lostNames, "@"+username)
-			} else {
-				lostNames = append(lostNames, id)
-			}
-		}
-		msg := fmt.Sprintf("Lost: %s", strings.Join(lostNames, ", "))
-		if err := beeep.Notify(title, msg, ""); err != nil {
-			log.Printf("Notification error: %v", err)
-		}
-	}
+	return fu
 }

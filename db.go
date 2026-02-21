@@ -70,6 +70,26 @@ func InitDB() *sql.DB {
 			is_active INTEGER DEFAULT 1,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
+
+		CREATE TABLE IF NOT EXISTS list_cache (
+			list_id TEXT NOT NULL,
+			owner_user_id TEXT NOT NULL,
+			name TEXT NOT NULL,
+			description TEXT DEFAULT '',
+			member_count INTEGER DEFAULT 0,
+			private INTEGER DEFAULT 0,
+			fetched_at TEXT NOT NULL,
+			PRIMARY KEY (list_id, owner_user_id)
+		);
+
+		CREATE TABLE IF NOT EXISTS list_member_cache (
+			list_id TEXT NOT NULL,
+			user_id TEXT NOT NULL,
+			fetched_at TEXT NOT NULL,
+			PRIMARY KEY (list_id, user_id)
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_list_member_user ON list_member_cache(user_id);
 	`)
 	if err != nil {
 		log.Fatal(fmt.Errorf("creating tables: %w", err))
@@ -148,101 +168,6 @@ func SaveSnapshot(db *sql.DB, sourceUserId string, users []gen.User) error {
 	}
 
 	return tx.Commit()
-}
-
-// GetPreviousFollowingIDs returns the set of target user IDs from the most recent
-// snapshot before the current one for a given source user.
-func GetPreviousFollowingIDs(db *sql.DB, sourceUserId string) (map[string]bool, error) {
-	// Get the two most recent distinct fetched_at timestamps
-	rows, err := db.Query(`
-		SELECT DISTINCT fetched_at FROM following_snapshots
-		WHERE source_user_id = ?
-		ORDER BY fetched_at DESC
-		LIMIT 2
-	`, sourceUserId)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var timestamps []string
-	for rows.Next() {
-		var ts string
-		if err := rows.Scan(&ts); err != nil {
-			return nil, err
-		}
-		timestamps = append(timestamps, ts)
-	}
-
-	// Need at least 2 snapshots to compare
-	if len(timestamps) < 2 {
-		return nil, nil
-	}
-
-	previousTS := timestamps[1]
-	idRows, err := db.Query(`
-		SELECT target_user_id FROM following_snapshots
-		WHERE source_user_id = ? AND fetched_at = ?
-	`, sourceUserId, previousTS)
-	if err != nil {
-		return nil, err
-	}
-	defer idRows.Close()
-
-	ids := make(map[string]bool)
-	for idRows.Next() {
-		var id string
-		if err := idRows.Scan(&id); err != nil {
-			return nil, err
-		}
-		ids[id] = true
-	}
-	return ids, nil
-}
-
-// GetSnapshotTimestamps returns all distinct snapshot timestamps for a source user, newest first.
-func GetSnapshotTimestamps(db *sql.DB, sourceUserId string) ([]string, error) {
-	rows, err := db.Query(`
-		SELECT DISTINCT fetched_at FROM following_snapshots
-		WHERE source_user_id = ?
-		ORDER BY fetched_at DESC
-	`, sourceUserId)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var timestamps []string
-	for rows.Next() {
-		var ts string
-		if err := rows.Scan(&ts); err != nil {
-			return nil, err
-		}
-		timestamps = append(timestamps, ts)
-	}
-	return timestamps, nil
-}
-
-// GetSnapshotUserIDs returns target user IDs for a specific snapshot timestamp.
-func GetSnapshotUserIDs(db *sql.DB, sourceUserId, fetchedAt string) (map[string]bool, error) {
-	rows, err := db.Query(`
-		SELECT target_user_id FROM following_snapshots
-		WHERE source_user_id = ? AND fetched_at = ?
-	`, sourceUserId, fetchedAt)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	ids := make(map[string]bool)
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		ids[id] = true
-	}
-	return ids, nil
 }
 
 // GetUsersByIDs returns FollowingUser records for a list of user IDs.
@@ -372,4 +297,188 @@ func LogFetch(db *sql.DB, endpoint, userId string, statusCode int) {
 	if err != nil {
 		log.Printf("Warning: failed to log fetch: %v", err)
 	}
+}
+
+// --- Cache freshness checks (30-day threshold) ---
+
+func IsFollowingCacheFresh(db *sql.DB, sourceUserId string) bool {
+	var fetchedAt string
+	err := db.QueryRow(`
+		SELECT COALESCE(MAX(fetched_at), '') FROM following_snapshots WHERE source_user_id = ?
+	`, sourceUserId).Scan(&fetchedAt)
+	if err != nil || fetchedAt == "" {
+		return false
+	}
+	t, err := time.Parse(time.RFC3339, fetchedAt)
+	if err != nil {
+		return false
+	}
+	return time.Since(t) < 30*24*time.Hour
+}
+
+func IsListCacheFresh(db *sql.DB, ownerUserId string) bool {
+	var fetchedAt string
+	err := db.QueryRow(`
+		SELECT COALESCE(MAX(fetched_at), '') FROM list_cache WHERE owner_user_id = ?
+	`, ownerUserId).Scan(&fetchedAt)
+	if err != nil || fetchedAt == "" {
+		return false
+	}
+	t, err := time.Parse(time.RFC3339, fetchedAt)
+	if err != nil {
+		return false
+	}
+	return time.Since(t) < 30*24*time.Hour
+}
+
+func IsListMemberCacheFresh(db *sql.DB, listId string) bool {
+	var fetchedAt string
+	err := db.QueryRow(`
+		SELECT COALESCE(MAX(fetched_at), '') FROM list_member_cache WHERE list_id = ?
+	`, listId).Scan(&fetchedAt)
+	if err != nil || fetchedAt == "" {
+		return false
+	}
+	t, err := time.Parse(time.RFC3339, fetchedAt)
+	if err != nil {
+		return false
+	}
+	return time.Since(t) < 30*24*time.Hour
+}
+
+// --- List cache CRUD ---
+
+func SaveListCache(db *sql.DB, ownerUserId string, lists []TwitterList) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec(`DELETE FROM list_cache WHERE owner_user_id = ?`, ownerUserId)
+	if err != nil {
+		return err
+	}
+
+	fetchedAt := time.Now().UTC().Format(time.RFC3339)
+	stmt, err := tx.Prepare(`INSERT INTO list_cache (list_id, owner_user_id, name, description, member_count, private, fetched_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, l := range lists {
+		priv := 0
+		if l.Private {
+			priv = 1
+		}
+		if _, err := stmt.Exec(l.Id, ownerUserId, l.Name, l.Description, l.MemberCount, priv, fetchedAt); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func GetCachedLists(db *sql.DB, ownerUserId string) []TwitterList {
+	rows, err := db.Query(`SELECT list_id, name, description, member_count, private FROM list_cache WHERE owner_user_id = ?`, ownerUserId)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	var lists []TwitterList
+	for rows.Next() {
+		var l TwitterList
+		var priv int
+		if err := rows.Scan(&l.Id, &l.Name, &l.Description, &l.MemberCount, &priv); err != nil {
+			continue
+		}
+		l.Private = priv == 1
+		lists = append(lists, l)
+	}
+	return lists
+}
+
+func SaveListMemberCache(db *sql.DB, listId string, userIDs []string) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec(`DELETE FROM list_member_cache WHERE list_id = ?`, listId)
+	if err != nil {
+		return err
+	}
+
+	fetchedAt := time.Now().UTC().Format(time.RFC3339)
+	stmt, err := tx.Prepare(`INSERT INTO list_member_cache (list_id, user_id, fetched_at) VALUES (?, ?, ?)`)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, uid := range userIDs {
+		if _, err := stmt.Exec(listId, uid, fetchedAt); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+func GetCachedListMemberIDs(db *sql.DB, listId string) []string {
+	rows, err := db.Query(`SELECT user_id FROM list_member_cache WHERE list_id = ?`, listId)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			continue
+		}
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+// GetListNamesForUsers returns a map of user_id -> []list_name for the given user IDs.
+func GetListNamesForUsers(db *sql.DB, ownerUserId string, userIDs []string) map[string][]string {
+	if len(userIDs) == 0 {
+		return nil
+	}
+
+	placeholders := make([]string, len(userIDs))
+	args := make([]interface{}, 0, len(userIDs)+1)
+	args = append(args, ownerUserId)
+	for i, id := range userIDs {
+		placeholders[i] = "?"
+		args = append(args, id)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT lmc.user_id, lc.name
+		FROM list_member_cache lmc
+		JOIN list_cache lc ON lmc.list_id = lc.list_id AND lc.owner_user_id = ?
+		WHERE lmc.user_id IN (%s)
+		ORDER BY lc.name
+	`, strings.Join(placeholders, ","))
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	result := make(map[string][]string)
+	for rows.Next() {
+		var uid, listName string
+		if err := rows.Scan(&uid, &listName); err != nil {
+			continue
+		}
+		result[uid] = append(result[uid], listName)
+	}
+	return result
 }
