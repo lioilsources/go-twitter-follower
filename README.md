@@ -1,3 +1,17 @@
+# Boost Your Twitter/X Account by Stats
+
+# 21/2/2026
+- accounts stats from all account lists
+- followers list stats
+
+# 15/2/2026
+- Claude Code introduced
+- walis V2 UI for macOS desktop
+- sqlite support to cache responses 
+- following list stats
+- multi account support
+- pay per request for X V2 API calls
+
 # 4/6/2023
 - OAuth1 Pin based 
 - unable to get OAuth2 PKCE (need to expose endpoint)

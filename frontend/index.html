@@ -28,6 +28,7 @@
         <nav class="tabs">
             <button class="tab active" onclick="switchTab('following')">Following</button>
             <button class="tab" onclick="switchTab('changes')">Changes</button>
+            <button class="tab" onclick="switchTab('lists')">Lists</button>
         </nav>
 
         <!-- Following Tab -->
@@ -80,6 +81,40 @@
                         <h3 class="diff-header diff-lost-header">Unfollowed</h3>
                         <div id="diff-lost-list" class="diff-list"></div>
                     </div>
+                </div>
+            </div>
+        </div>
+        <!-- Lists Tab -->
+        <div id="tab-lists" class="tab-content">
+            <div id="lists-grid-view">
+                <div id="lists-grid" class="lists-grid">
+                    <div class="loading">Loading lists...</div>
+                </div>
+            </div>
+            <div id="list-members-view" style="display: none;">
+                <div class="list-members-header">
+                    <button class="back-btn" onclick="backToLists()">&larr; Back to Lists</button>
+                    <span id="list-members-title"></span>
+                </div>
+                <div class="controls">
+                    <input type="text" id="list-members-search" placeholder="Search members..." oninput="filterListMembers()">
+                </div>
+                <div id="list-members-table-container">
+                    <table id="list-members-table">
+                        <thead>
+                            <tr>
+                                <th class="col-avatar"></th>
+                                <th class="col-user">User</th>
+                                <th class="col-desc">Description</th>
+                                <th class="col-num">Followers</th>
+                                <th class="col-num">Following</th>
+                                <th class="col-num">Tweets</th>
+                                <th class="col-loc">Location</th>
+                            </tr>
+                        </thead>
+                        <tbody id="list-members-body">
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>

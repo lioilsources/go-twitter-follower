@@ -75,6 +75,56 @@ const (
 	UserWithheldScopeUser UserWithheldScope = "user"
 )
 
+// Defines values for ListGetMembersParamsUserFields.
+const (
+	ListGetMembersParamsUserFieldsCreatedAt       ListGetMembersParamsUserFields = "created_at"
+	ListGetMembersParamsUserFieldsDescription     ListGetMembersParamsUserFields = "description"
+	ListGetMembersParamsUserFieldsEntities        ListGetMembersParamsUserFields = "entities"
+	ListGetMembersParamsUserFieldsId              ListGetMembersParamsUserFields = "id"
+	ListGetMembersParamsUserFieldsLocation        ListGetMembersParamsUserFields = "location"
+	ListGetMembersParamsUserFieldsName            ListGetMembersParamsUserFields = "name"
+	ListGetMembersParamsUserFieldsPinnedTweetId   ListGetMembersParamsUserFields = "pinned_tweet_id"
+	ListGetMembersParamsUserFieldsProfileImageUrl ListGetMembersParamsUserFields = "profile_image_url"
+	ListGetMembersParamsUserFieldsProtected       ListGetMembersParamsUserFields = "protected"
+	ListGetMembersParamsUserFieldsPublicMetrics   ListGetMembersParamsUserFields = "public_metrics"
+	ListGetMembersParamsUserFieldsUrl             ListGetMembersParamsUserFields = "url"
+	ListGetMembersParamsUserFieldsUsername        ListGetMembersParamsUserFields = "username"
+	ListGetMembersParamsUserFieldsVerified        ListGetMembersParamsUserFields = "verified"
+	ListGetMembersParamsUserFieldsVerifiedType    ListGetMembersParamsUserFields = "verified_type"
+	ListGetMembersParamsUserFieldsWithheld        ListGetMembersParamsUserFields = "withheld"
+)
+
+// Defines values for ListGetMembersParamsExpansions.
+const (
+	ListGetMembersParamsExpansionsPinnedTweetId ListGetMembersParamsExpansions = "pinned_tweet_id"
+)
+
+// Defines values for ListGetMembersParamsTweetFields.
+const (
+	ListGetMembersParamsTweetFieldsAttachments         ListGetMembersParamsTweetFields = "attachments"
+	ListGetMembersParamsTweetFieldsAuthorId            ListGetMembersParamsTweetFields = "author_id"
+	ListGetMembersParamsTweetFieldsContextAnnotations  ListGetMembersParamsTweetFields = "context_annotations"
+	ListGetMembersParamsTweetFieldsConversationId      ListGetMembersParamsTweetFields = "conversation_id"
+	ListGetMembersParamsTweetFieldsCreatedAt           ListGetMembersParamsTweetFields = "created_at"
+	ListGetMembersParamsTweetFieldsEditControls        ListGetMembersParamsTweetFields = "edit_controls"
+	ListGetMembersParamsTweetFieldsEditHistoryTweetIds ListGetMembersParamsTweetFields = "edit_history_tweet_ids"
+	ListGetMembersParamsTweetFieldsEntities            ListGetMembersParamsTweetFields = "entities"
+	ListGetMembersParamsTweetFieldsGeo                 ListGetMembersParamsTweetFields = "geo"
+	ListGetMembersParamsTweetFieldsId                  ListGetMembersParamsTweetFields = "id"
+	ListGetMembersParamsTweetFieldsInReplyToUserId     ListGetMembersParamsTweetFields = "in_reply_to_user_id"
+	ListGetMembersParamsTweetFieldsLang                ListGetMembersParamsTweetFields = "lang"
+	ListGetMembersParamsTweetFieldsNonPublicMetrics    ListGetMembersParamsTweetFields = "non_public_metrics"
+	ListGetMembersParamsTweetFieldsOrganicMetrics      ListGetMembersParamsTweetFields = "organic_metrics"
+	ListGetMembersParamsTweetFieldsPossiblySensitive   ListGetMembersParamsTweetFields = "possibly_sensitive"
+	ListGetMembersParamsTweetFieldsPromotedMetrics     ListGetMembersParamsTweetFields = "promoted_metrics"
+	ListGetMembersParamsTweetFieldsPublicMetrics       ListGetMembersParamsTweetFields = "public_metrics"
+	ListGetMembersParamsTweetFieldsReferencedTweets    ListGetMembersParamsTweetFields = "referenced_tweets"
+	ListGetMembersParamsTweetFieldsReplySettings       ListGetMembersParamsTweetFields = "reply_settings"
+	ListGetMembersParamsTweetFieldsSource              ListGetMembersParamsTweetFields = "source"
+	ListGetMembersParamsTweetFieldsText                ListGetMembersParamsTweetFields = "text"
+	ListGetMembersParamsTweetFieldsWithheld            ListGetMembersParamsTweetFields = "withheld"
+)
+
 // Defines values for FindUserByUsernameParamsUserFields.
 const (
 	FindUserByUsernameParamsUserFieldsCreatedAt       FindUserByUsernameParamsUserFields = "created_at"
@@ -196,7 +246,7 @@ const (
 
 // Defines values for UsersIdFollowingParamsExpansions.
 const (
-	PinnedTweetId UsersIdFollowingParamsExpansions = "pinned_tweet_id"
+	UsersIdFollowingParamsExpansionsPinnedTweetId UsersIdFollowingParamsExpansions = "pinned_tweet_id"
 )
 
 // Defines values for UsersIdFollowingParamsTweetFields.
@@ -223,6 +273,42 @@ const (
 	UsersIdFollowingParamsTweetFieldsSource              UsersIdFollowingParamsTweetFields = "source"
 	UsersIdFollowingParamsTweetFieldsText                UsersIdFollowingParamsTweetFields = "text"
 	UsersIdFollowingParamsTweetFieldsWithheld            UsersIdFollowingParamsTweetFields = "withheld"
+)
+
+// Defines values for ListUserOwnedListsParamsListFields.
+const (
+	ListUserOwnedListsParamsListFieldsCreatedAt     ListUserOwnedListsParamsListFields = "created_at"
+	ListUserOwnedListsParamsListFieldsDescription   ListUserOwnedListsParamsListFields = "description"
+	ListUserOwnedListsParamsListFieldsFollowerCount ListUserOwnedListsParamsListFields = "follower_count"
+	ListUserOwnedListsParamsListFieldsId            ListUserOwnedListsParamsListFields = "id"
+	ListUserOwnedListsParamsListFieldsMemberCount   ListUserOwnedListsParamsListFields = "member_count"
+	ListUserOwnedListsParamsListFieldsName          ListUserOwnedListsParamsListFields = "name"
+	ListUserOwnedListsParamsListFieldsOwnerId       ListUserOwnedListsParamsListFields = "owner_id"
+	ListUserOwnedListsParamsListFieldsPrivate       ListUserOwnedListsParamsListFields = "private"
+)
+
+// Defines values for ListUserOwnedListsParamsExpansions.
+const (
+	OwnerId ListUserOwnedListsParamsExpansions = "owner_id"
+)
+
+// Defines values for ListUserOwnedListsParamsUserFields.
+const (
+	ListUserOwnedListsParamsUserFieldsCreatedAt       ListUserOwnedListsParamsUserFields = "created_at"
+	ListUserOwnedListsParamsUserFieldsDescription     ListUserOwnedListsParamsUserFields = "description"
+	ListUserOwnedListsParamsUserFieldsEntities        ListUserOwnedListsParamsUserFields = "entities"
+	ListUserOwnedListsParamsUserFieldsId              ListUserOwnedListsParamsUserFields = "id"
+	ListUserOwnedListsParamsUserFieldsLocation        ListUserOwnedListsParamsUserFields = "location"
+	ListUserOwnedListsParamsUserFieldsName            ListUserOwnedListsParamsUserFields = "name"
+	ListUserOwnedListsParamsUserFieldsPinnedTweetId   ListUserOwnedListsParamsUserFields = "pinned_tweet_id"
+	ListUserOwnedListsParamsUserFieldsProfileImageUrl ListUserOwnedListsParamsUserFields = "profile_image_url"
+	ListUserOwnedListsParamsUserFieldsProtected       ListUserOwnedListsParamsUserFields = "protected"
+	ListUserOwnedListsParamsUserFieldsPublicMetrics   ListUserOwnedListsParamsUserFields = "public_metrics"
+	ListUserOwnedListsParamsUserFieldsUrl             ListUserOwnedListsParamsUserFields = "url"
+	ListUserOwnedListsParamsUserFieldsUsername        ListUserOwnedListsParamsUserFields = "username"
+	ListUserOwnedListsParamsUserFieldsVerified        ListUserOwnedListsParamsUserFields = "verified"
+	ListUserOwnedListsParamsUserFieldsVerifiedType    ListUserOwnedListsParamsUserFields = "verified_type"
+	ListUserOwnedListsParamsUserFieldsWithheld        ListUserOwnedListsParamsUserFields = "withheld"
 )
 
 // CashtagEntity defines model for CashtagEntity.
@@ -294,12 +380,6 @@ type EntityIndicesInclusiveInclusive struct {
 	Start int `json:"start"`
 }
 
-// Error defines model for Error.
-type Error struct {
-	Code    int32  `json:"code"`
-	Message string `json:"message"`
-}
-
 // Expansions defines model for Expansions.
 type Expansions struct {
 	Media  *[]Media `json:"media,omitempty"`
@@ -347,6 +427,23 @@ type Geo struct {
 // GeoType defines model for Geo.Type.
 type GeoType string
 
+// Get2ListsIdMembersResponse defines model for Get2ListsIdMembersResponse.
+type Get2ListsIdMembersResponse struct {
+	Data     *[]User     `json:"data,omitempty"`
+	Errors   *[]Problem  `json:"errors,omitempty"`
+	Includes *Expansions `json:"includes,omitempty"`
+	Meta     *struct {
+		// NextToken The next token.
+		NextToken *NextToken `json:"next_token,omitempty"`
+
+		// PreviousToken The previous token.
+		PreviousToken *PreviousToken `json:"previous_token,omitempty"`
+
+		// ResultCount The number of results returned in this response.
+		ResultCount *ResultCount `json:"result_count,omitempty"`
+	} `json:"meta,omitempty"`
+}
+
 // Get2UsersByUsernameUsernameResponse defines model for Get2UsersByUsernameUsernameResponse.
 type Get2UsersByUsernameUsernameResponse struct {
 	// Data The Twitter User object.
@@ -389,6 +486,23 @@ type Get2UsersIdFollowingResponse struct {
 	} `json:"meta,omitempty"`
 }
 
+// Get2UsersIdOwnedListsResponse defines model for Get2UsersIdOwnedListsResponse.
+type Get2UsersIdOwnedListsResponse struct {
+	Data     *[]List     `json:"data,omitempty"`
+	Errors   *[]Problem  `json:"errors,omitempty"`
+	Includes *Expansions `json:"includes,omitempty"`
+	Meta     *struct {
+		// NextToken The next token.
+		NextToken *NextToken `json:"next_token,omitempty"`
+
+		// PreviousToken The previous token.
+		PreviousToken *PreviousToken `json:"previous_token,omitempty"`
+
+		// ResultCount The number of results returned in this response.
+		ResultCount *ResultCount `json:"result_count,omitempty"`
+	} `json:"meta,omitempty"`
+}
+
 // HashtagEntity defines model for HashtagEntity.
 type HashtagEntity struct {
 	// End Index (zero-based) at which position this entity ends.  The index is exclusive.
@@ -409,6 +523,27 @@ type HashtagFields struct {
 
 // HttpStatusCode HTTP Status Code.
 type HttpStatusCode = int
+
+// List A Twitter List is a curated group of accounts.
+type List struct {
+	CreatedAt     *time.Time `json:"created_at,omitempty"`
+	Description   *string    `json:"description,omitempty"`
+	FollowerCount *int       `json:"follower_count,omitempty"`
+
+	// Id The unique identifier of this List.
+	Id          ListId `json:"id"`
+	MemberCount *int   `json:"member_count,omitempty"`
+
+	// Name The name of this List.
+	Name string `json:"name"`
+
+	// OwnerId Unique identifier of this User. This is returned as a string in order to avoid complications with languages and tools that cannot handle large integers.
+	OwnerId *UserId `json:"owner_id,omitempty"`
+	Private *bool   `json:"private,omitempty"`
+}
+
+// ListId The unique identifier of this List.
+type ListId = string
 
 // Media defines model for Media.
 type Media struct {
@@ -461,6 +596,9 @@ type NextToken = string
 
 // PaginationToken32 A base32 pagination token.
 type PaginationToken32 = string
+
+// PaginationTokenLong A 'long' pagination token.
+type PaginationTokenLong = string
 
 // Place defines model for Place.
 type Place struct {
@@ -901,6 +1039,12 @@ type UsersFollowingCreateResponse struct {
 	Errors *[]Problem `json:"errors,omitempty"`
 }
 
+// ListExpansionsParameter The list of fields you can expand for a [List](#List) object. If the field has an ID, it can be expanded into a full object.
+type ListExpansionsParameter = []string
+
+// ListFieldsParameter The fields available for a List object.
+type ListFieldsParameter = []string
+
 // TweetFieldsParameter The fields available for a Tweet object.
 type TweetFieldsParameter = []string
 
@@ -909,6 +1053,33 @@ type UserExpansionsParameter = []string
 
 // UserFieldsParameter The fields available for a User object.
 type UserFieldsParameter = []string
+
+// ListGetMembersParams defines parameters for ListGetMembers.
+type ListGetMembersParams struct {
+	// MaxResults The maximum number of results.
+	MaxResults *int32 `form:"max_results,omitempty" json:"max_results,omitempty"`
+
+	// PaginationToken This parameter is used to get a specified 'page' of results.
+	PaginationToken *PaginationTokenLong `form:"pagination_token,omitempty" json:"pagination_token,omitempty"`
+
+	// UserFields A comma separated list of User fields to display.
+	UserFields *UserFieldsParameter `form:"user.fields,omitempty" json:"user.fields,omitempty"`
+
+	// Expansions A comma separated list of fields to expand.
+	Expansions *UserExpansionsParameter `form:"expansions,omitempty" json:"expansions,omitempty"`
+
+	// TweetFields A comma separated list of Tweet fields to display.
+	TweetFields *TweetFieldsParameter `form:"tweet.fields,omitempty" json:"tweet.fields,omitempty"`
+}
+
+// ListGetMembersParamsUserFields defines parameters for ListGetMembers.
+type ListGetMembersParamsUserFields string
+
+// ListGetMembersParamsExpansions defines parameters for ListGetMembers.
+type ListGetMembersParamsExpansions string
+
+// ListGetMembersParamsTweetFields defines parameters for ListGetMembers.
+type ListGetMembersParamsTweetFields string
 
 // FindUserByUsernameParams defines parameters for FindUserByUsername.
 type FindUserByUsernameParams struct {
@@ -984,6 +1155,33 @@ type UsersIdFollowingParamsExpansions string
 
 // UsersIdFollowingParamsTweetFields defines parameters for UsersIdFollowing.
 type UsersIdFollowingParamsTweetFields string
+
+// ListUserOwnedListsParams defines parameters for ListUserOwnedLists.
+type ListUserOwnedListsParams struct {
+	// MaxResults The maximum number of results.
+	MaxResults *int32 `form:"max_results,omitempty" json:"max_results,omitempty"`
+
+	// PaginationToken This parameter is used to get a specified 'page' of results.
+	PaginationToken *PaginationTokenLong `form:"pagination_token,omitempty" json:"pagination_token,omitempty"`
+
+	// ListFields A comma separated list of List fields to display.
+	ListFields *ListFieldsParameter `form:"list.fields,omitempty" json:"list.fields,omitempty"`
+
+	// Expansions A comma separated list of fields to expand.
+	Expansions *ListExpansionsParameter `form:"expansions,omitempty" json:"expansions,omitempty"`
+
+	// UserFields A comma separated list of User fields to display.
+	UserFields *UserFieldsParameter `form:"user.fields,omitempty" json:"user.fields,omitempty"`
+}
+
+// ListUserOwnedListsParamsListFields defines parameters for ListUserOwnedLists.
+type ListUserOwnedListsParamsListFields string
+
+// ListUserOwnedListsParamsExpansions defines parameters for ListUserOwnedLists.
+type ListUserOwnedListsParamsExpansions string
+
+// ListUserOwnedListsParamsUserFields defines parameters for ListUserOwnedLists.
+type ListUserOwnedListsParamsUserFields string
 
 // UsersIdFollowJSONRequestBody defines body for UsersIdFollow for application/json ContentType.
 type UsersIdFollowJSONRequestBody = UsersFollowingCreateRequest
@@ -1061,6 +1259,9 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// ListGetMembers request
+	ListGetMembers(ctx context.Context, id ListId, params *ListGetMembersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// FindUserByUsername request
 	FindUserByUsername(ctx context.Context, username string, params *FindUserByUsernameParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -1074,6 +1275,21 @@ type ClientInterface interface {
 	UsersIdFollowWithBody(ctx context.Context, id UserIdMatchesAuthenticatedUser, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	UsersIdFollow(ctx context.Context, id UserIdMatchesAuthenticatedUser, body UsersIdFollowJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// ListUserOwnedLists request
+	ListUserOwnedLists(ctx context.Context, id UserId, params *ListUserOwnedListsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+func (c *Client) ListGetMembers(ctx context.Context, id ListId, params *ListGetMembersParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListGetMembersRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 func (c *Client) FindUserByUsername(ctx context.Context, username string, params *FindUserByUsernameParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -1134,6 +1350,136 @@ func (c *Client) UsersIdFollow(ctx context.Context, id UserIdMatchesAuthenticate
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+func (c *Client) ListUserOwnedLists(ctx context.Context, id UserId, params *ListUserOwnedListsParams, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewListUserOwnedListsRequest(c.Server, id, params)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+// NewListGetMembersRequest generates requests for ListGetMembers
+func NewListGetMembersRequest(server string, id ListId, params *ListGetMembersParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/2/lists/%s/members", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	queryValues := queryURL.Query()
+
+	if params.MaxResults != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "max_results", runtime.ParamLocationQuery, *params.MaxResults); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.PaginationToken != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pagination_token", runtime.ParamLocationQuery, *params.PaginationToken); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.UserFields != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", false, "user.fields", runtime.ParamLocationQuery, *params.UserFields); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.Expansions != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", false, "expansions", runtime.ParamLocationQuery, *params.Expansions); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.TweetFields != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", false, "tweet.fields", runtime.ParamLocationQuery, *params.TweetFields); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	queryURL.RawQuery = queryValues.Encode()
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
 // NewFindUserByUsernameRequest generates requests for FindUserByUsername
@@ -1505,6 +1851,124 @@ func NewUsersIdFollowRequestWithBody(server string, id UserIdMatchesAuthenticate
 	return req, nil
 }
 
+// NewListUserOwnedListsRequest generates requests for ListUserOwnedLists
+func NewListUserOwnedListsRequest(server string, id UserId, params *ListUserOwnedListsParams) (*http.Request, error) {
+	var err error
+
+	var pathParam0 string
+
+	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "id", runtime.ParamLocationPath, id)
+	if err != nil {
+		return nil, err
+	}
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/2/users/%s/owned_lists", pathParam0)
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	queryValues := queryURL.Query()
+
+	if params.MaxResults != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "max_results", runtime.ParamLocationQuery, *params.MaxResults); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.PaginationToken != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", true, "pagination_token", runtime.ParamLocationQuery, *params.PaginationToken); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.ListFields != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", false, "list.fields", runtime.ParamLocationQuery, *params.ListFields); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.Expansions != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", false, "expansions", runtime.ParamLocationQuery, *params.Expansions); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	if params.UserFields != nil {
+
+		if queryFrag, err := runtime.StyleParamWithLocation("form", false, "user.fields", runtime.ParamLocationQuery, *params.UserFields); err != nil {
+			return nil, err
+		} else if parsed, err := url.ParseQuery(queryFrag); err != nil {
+			return nil, err
+		} else {
+			for k, v := range parsed {
+				for _, v2 := range v {
+					queryValues.Add(k, v2)
+				}
+			}
+		}
+
+	}
+
+	queryURL.RawQuery = queryValues.Encode()
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
 func (c *Client) applyEditors(ctx context.Context, req *http.Request, additionalEditors []RequestEditorFn) error {
 	for _, r := range c.RequestEditors {
 		if err := r(ctx, req); err != nil {
@@ -1548,6 +2012,9 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// ListGetMembers request
+	ListGetMembersWithResponse(ctx context.Context, id ListId, params *ListGetMembersParams, reqEditors ...RequestEditorFn) (*ListGetMembersResponse, error)
+
 	// FindUserByUsername request
 	FindUserByUsernameWithResponse(ctx context.Context, username string, params *FindUserByUsernameParams, reqEditors ...RequestEditorFn) (*FindUserByUsernameResponse, error)
 
@@ -1561,6 +2028,32 @@ type ClientWithResponsesInterface interface {
 	UsersIdFollowWithBodyWithResponse(ctx context.Context, id UserIdMatchesAuthenticatedUser, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*UsersIdFollowResponse, error)
 
 	UsersIdFollowWithResponse(ctx context.Context, id UserIdMatchesAuthenticatedUser, body UsersIdFollowJSONRequestBody, reqEditors ...RequestEditorFn) (*UsersIdFollowResponse, error)
+
+	// ListUserOwnedLists request
+	ListUserOwnedListsWithResponse(ctx context.Context, id UserId, params *ListUserOwnedListsParams, reqEditors ...RequestEditorFn) (*ListUserOwnedListsResponse, error)
+}
+
+type ListGetMembersResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *Get2ListsIdMembersResponse
+	JSONDefault  *Problem
+}
+
+// Status returns HTTPResponse.Status
+func (r ListGetMembersResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListGetMembersResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
 }
 
 type FindUserByUsernameResponse struct {
@@ -1655,6 +2148,38 @@ func (r UsersIdFollowResponse) StatusCode() int {
 	return 0
 }
 
+type ListUserOwnedListsResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *Get2UsersIdOwnedListsResponse
+	JSONDefault  *Problem
+}
+
+// Status returns HTTPResponse.Status
+func (r ListUserOwnedListsResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r ListUserOwnedListsResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
+// ListGetMembersWithResponse request returning *ListGetMembersResponse
+func (c *ClientWithResponses) ListGetMembersWithResponse(ctx context.Context, id ListId, params *ListGetMembersParams, reqEditors ...RequestEditorFn) (*ListGetMembersResponse, error) {
+	rsp, err := c.ListGetMembers(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListGetMembersResponse(rsp)
+}
+
 // FindUserByUsernameWithResponse request returning *FindUserByUsernameResponse
 func (c *ClientWithResponses) FindUserByUsernameWithResponse(ctx context.Context, username string, params *FindUserByUsernameParams, reqEditors ...RequestEditorFn) (*FindUserByUsernameResponse, error) {
 	rsp, err := c.FindUserByUsername(ctx, username, params, reqEditors...)
@@ -1697,6 +2222,48 @@ func (c *ClientWithResponses) UsersIdFollowWithResponse(ctx context.Context, id 
 		return nil, err
 	}
 	return ParseUsersIdFollowResponse(rsp)
+}
+
+// ListUserOwnedListsWithResponse request returning *ListUserOwnedListsResponse
+func (c *ClientWithResponses) ListUserOwnedListsWithResponse(ctx context.Context, id UserId, params *ListUserOwnedListsParams, reqEditors ...RequestEditorFn) (*ListUserOwnedListsResponse, error) {
+	rsp, err := c.ListUserOwnedLists(ctx, id, params, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseListUserOwnedListsResponse(rsp)
+}
+
+// ParseListGetMembersResponse parses an HTTP response from a ListGetMembersWithResponse call
+func ParseListGetMembersResponse(rsp *http.Response) (*ListGetMembersResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListGetMembersResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Get2ListsIdMembersResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
 }
 
 // ParseFindUserByUsernameResponse parses an HTTP response from a FindUserByUsernameWithResponse call
@@ -1814,6 +2381,39 @@ func ParseUsersIdFollowResponse(rsp *http.Response) (*UsersIdFollowResponse, err
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
 		var dest UsersFollowingCreateResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && true:
+		var dest Problem
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSONDefault = &dest
+
+	}
+
+	return response, nil
+}
+
+// ParseListUserOwnedListsResponse parses an HTTP response from a ListUserOwnedListsWithResponse call
+func ParseListUserOwnedListsResponse(rsp *http.Response) (*ListUserOwnedListsResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &ListUserOwnedListsResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest Get2UsersIdOwnedListsResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

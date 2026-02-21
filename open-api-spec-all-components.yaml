@@ -51,8 +51,122 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-            application/problem+json:
+                $ref: '#/components/schemas/Problem'
+  /2/lists/{id}/members:
+    get:
+      security:
+        - BearerToken: []
+        - OAuth2UserToken:
+            - list.read
+            - tweet.read
+            - users.read
+        - UserToken: []
+      tags:
+        - Users
+      summary: Returns User objects that are members of a List by the provided List ID.
+      description: Returns a list of Users that are members of a List by the provided List ID.
+      externalDocs:
+        url: https://developer.twitter.com/en/docs/twitter-api/lists/list-members/api-reference/get-users-id-list_memberships
+      operationId: listGetMembers
+      parameters:
+        - name: id
+          in: path
+          description: The ID of the List.
+          required: true
+          schema:
+            $ref: '#/components/schemas/ListId'
+          style: simple
+        - name: max_results
+          in: query
+          description: The maximum number of results.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            format: int32
+            default: 100
+          style: form
+        - name: pagination_token
+          in: query
+          description: This parameter is used to get a specified 'page' of results.
+          required: false
+          schema:
+            $ref: '#/components/schemas/PaginationTokenLong'
+          style: form
+        - $ref: '#/components/parameters/UserFieldsParameter'
+        - $ref: '#/components/parameters/UserExpansionsParameter'
+        - $ref: '#/components/parameters/TweetFieldsParameter'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Get2ListsIdMembersResponse'
+        default:
+          description: The request has failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+  /2/users/{id}/owned_lists:
+    get:
+      security:
+        - BearerToken: []
+        - OAuth2UserToken:
+            - list.read
+            - tweet.read
+            - users.read
+        - UserToken: []
+      tags:
+        - Lists
+      summary: Get a User's Owned Lists.
+      description: Get a User's Owned Lists.
+      externalDocs:
+        url: https://developer.twitter.com/en/docs/twitter-api/lists/list-lookup/api-reference/get-users-id-owned_lists
+      operationId: listUserOwnedLists
+      parameters:
+        - name: id
+          in: path
+          description: The ID of the User to lookup.
+          required: true
+          example: '2244994945'
+          schema:
+            $ref: '#/components/schemas/UserId'
+          style: simple
+        - name: max_results
+          in: query
+          description: The maximum number of results.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            format: int32
+            default: 100
+          style: form
+        - name: pagination_token
+          in: query
+          description: This parameter is used to get a specified 'page' of results.
+          required: false
+          schema:
+            $ref: '#/components/schemas/PaginationTokenLong'
+          style: form
+        - $ref: '#/components/parameters/ListFieldsParameter'
+        - $ref: '#/components/parameters/ListExpansionsParameter'
+        - $ref: '#/components/parameters/UserFieldsParameter'
+      responses:
+        '200':
+          description: The request has succeeded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Get2UsersIdOwnedListsResponse'
+        default:
+          description: The request has failed.
+          content:
+            application/json:
               schema:
                 $ref: '#/components/schemas/Problem'
   /2/users/{id}/followers:
@@ -112,9 +226,6 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-            application/problem+json:
-              schema:
                 $ref: '#/components/schemas/Problem'
   /2/users/{id}/following:
     get:
@@ -173,9 +284,6 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-            application/problem+json:
-              schema:
                 $ref: '#/components/schemas/Problem'
     post:
       security:
@@ -215,9 +323,6 @@ paths:
           description: The request has failed.
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-            application/problem+json:
               schema:
                 $ref: '#/components/schemas/Problem'
 servers:

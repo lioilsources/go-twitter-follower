@@ -223,7 +223,104 @@ function switchTab(tab) {
 
     if (tab === 'changes') {
         loadDiff();
+    } else if (tab === 'lists') {
+        loadLists();
     }
+}
+
+// --- Lists ---
+
+let allListMembers = [];
+
+async function loadLists() {
+    const grid = document.getElementById('lists-grid');
+    grid.innerHTML = '<div class="loading">Loading lists...</div>';
+
+    // Reset to grid view
+    document.getElementById('lists-grid-view').style.display = '';
+    document.getElementById('list-members-view').style.display = 'none';
+
+    try {
+        const lists = await window.go.main.App.GetOwnedLists();
+        if (!lists || lists.length === 0) {
+            grid.innerHTML = '<div class="loading">No lists found</div>';
+            return;
+        }
+
+        grid.innerHTML = lists.map(l => `
+            <div class="list-card" onclick="viewListMembers('${l.id}', '${escapeHtml(l.name)}')">
+                <div class="list-card-name">${escapeHtml(l.name)}${l.private ? ' <span class="list-private-badge">Private</span>' : ''}</div>
+                <div class="list-card-desc">${escapeHtml(l.description)}</div>
+                <div class="list-card-meta">${l.member_count} members</div>
+            </div>
+        `).join('');
+    } catch (err) {
+        console.error('Error loading lists:', err);
+        grid.innerHTML = '<div class="loading">Error loading lists</div>';
+    }
+}
+
+async function viewListMembers(listId, listName) {
+    document.getElementById('lists-grid-view').style.display = 'none';
+    document.getElementById('list-members-view').style.display = '';
+    document.getElementById('list-members-title').textContent = listName;
+    document.getElementById('list-members-body').innerHTML =
+        '<tr><td colspan="7" class="loading">Loading members...</td></tr>';
+    document.getElementById('list-members-search').value = '';
+
+    try {
+        const members = await window.go.main.App.GetListMembers(listId);
+        allListMembers = members || [];
+        renderListMembers(allListMembers);
+    } catch (err) {
+        console.error('Error loading list members:', err);
+        document.getElementById('list-members-body').innerHTML =
+            '<tr><td colspan="7" class="loading">Error loading members</td></tr>';
+    }
+}
+
+function backToLists() {
+    document.getElementById('list-members-view').style.display = 'none';
+    document.getElementById('lists-grid-view').style.display = '';
+    allListMembers = [];
+}
+
+function renderListMembers(users) {
+    const tbody = document.getElementById('list-members-body');
+    if (!users || users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="loading">No members</td></tr>';
+        return;
+    }
+    tbody.innerHTML = users.map(u => `
+        <tr>
+            <td>${u.profile_image_url
+                ? `<img class="avatar" src="${u.profile_image_url}" alt="" loading="lazy">`
+                : '<div class="avatar"></div>'}</td>
+            <td>
+                <div class="user-cell">
+                    <span class="user-name">
+                        ${escapeHtml(u.name)}${u.verified ? '<span class="verified-badge">&#x2713;</span>' : ''}
+                    </span>
+                    <span class="user-handle">@${escapeHtml(u.username)}</span>
+                </div>
+            </td>
+            <td class="desc-cell" title="${escapeHtml(u.description)}">${escapeHtml(u.description)}</td>
+            <td class="num-cell">${formatNumber(u.followers_count)}</td>
+            <td class="num-cell">${formatNumber(u.following_count)}</td>
+            <td class="num-cell">${formatNumber(u.tweet_count)}</td>
+            <td class="loc-cell">${escapeHtml(u.location)}</td>
+        </tr>
+    `).join('');
+}
+
+function filterListMembers() {
+    const query = document.getElementById('list-members-search').value.toLowerCase();
+    const filtered = allListMembers.filter(u =>
+        u.username.toLowerCase().includes(query) ||
+        u.name.toLowerCase().includes(query) ||
+        (u.description && u.description.toLowerCase().includes(query))
+    );
+    renderListMembers(filtered);
 }
 
 // --- Diff view ---

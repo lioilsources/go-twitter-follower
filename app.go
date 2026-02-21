@@ -154,6 +154,121 @@ func (a *App) RemoveAccountByID(userID string) error {
 	return nil
 }
 
+// --- Lists ---
+
+type TwitterList struct {
+	Id          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	MemberCount int    `json:"member_count"`
+	Private     bool   `json:"private"`
+}
+
+func (a *App) GetOwnedLists() []TwitterList {
+	if a.selectedAccountID == "" {
+		return nil
+	}
+
+	acct, err := GetAccountByUserID(a.db, a.selectedAccountID)
+	if err != nil {
+		log.Printf("Error getting account: %v", err)
+		return nil
+	}
+
+	client, err := NewAuthClient(acct.BearerToken)
+	if err != nil {
+		log.Printf("Error creating client: %v", err)
+		return nil
+	}
+
+	lists, err := GetOwnedLists(client, a.selectedAccountID)
+	if err != nil {
+		log.Printf("Error fetching owned lists: %v", err)
+		return nil
+	}
+
+	var result []TwitterList
+	for _, l := range lists {
+		tl := TwitterList{
+			Id:   string(l.Id),
+			Name: l.Name,
+		}
+		if l.Description != nil {
+			tl.Description = *l.Description
+		}
+		if l.MemberCount != nil {
+			tl.MemberCount = *l.MemberCount
+		}
+		if l.Private != nil {
+			tl.Private = *l.Private
+		}
+		result = append(result, tl)
+	}
+	return result
+}
+
+func (a *App) GetListMembers(listId string) []FollowingUser {
+	if a.selectedAccountID == "" {
+		return nil
+	}
+
+	acct, err := GetAccountByUserID(a.db, a.selectedAccountID)
+	if err != nil {
+		log.Printf("Error getting account: %v", err)
+		return nil
+	}
+
+	client, err := NewAuthClient(acct.BearerToken)
+	if err != nil {
+		log.Printf("Error creating client: %v", err)
+		return nil
+	}
+
+	users, err := FetchAllListMembers(client, listId)
+	if err != nil {
+		log.Printf("Error fetching list members: %v", err)
+		return nil
+	}
+
+	var result []FollowingUser
+	for _, u := range users {
+		if err := UpsertUser(a.db, u); err != nil {
+			log.Printf("Warning: failed to upsert user %s: %v", u.Id, err)
+		}
+		fu := FollowingUser{
+			Id:       u.Id,
+			Username: u.Username,
+			Name:     u.Name,
+		}
+		if u.Description != nil {
+			fu.Description = *u.Description
+		}
+		if u.PublicMetrics != nil {
+			fu.FollowersCount = u.PublicMetrics.FollowersCount
+			fu.FollowingCount = u.PublicMetrics.FollowingCount
+			fu.TweetCount = u.PublicMetrics.TweetCount
+			fu.ListedCount = u.PublicMetrics.ListedCount
+		}
+		if u.Verified != nil {
+			fu.Verified = *u.Verified
+		}
+		if u.VerifiedType != nil {
+			fu.VerifiedType = string(*u.VerifiedType)
+		}
+		if u.ProfileImageUrl != nil {
+			fu.ProfileImageUrl = *u.ProfileImageUrl
+		}
+		if u.Location != nil {
+			fu.Location = *u.Location
+		}
+		if u.CreatedAt != nil {
+			fu.CreatedAt = u.CreatedAt.Format("2006-01-02T15:04:05Z")
+		}
+		result = append(result, fu)
+	}
+	return result
+}
+
 // --- Scheduler & Fetching ---
 
 func (a *App) scheduler() {

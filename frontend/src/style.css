@@ -464,6 +464,90 @@ tbody td {
     font-size: 13px;
 }
 
+/* Lists */
+.lists-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    padding: 20px;
+}
+
+.list-card {
+    background: #16181c;
+    border: 1px solid #2f3336;
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.list-card:hover {
+    background: #1d1f23;
+}
+
+.list-card-name {
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 6px;
+}
+
+.list-private-badge {
+    background: #2f3336;
+    color: #71767b;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+.list-card-desc {
+    color: #8b98a5;
+    font-size: 13px;
+    margin-bottom: 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.list-card-meta {
+    color: #71767b;
+    font-size: 13px;
+}
+
+.list-members-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    border-bottom: 1px solid #2f3336;
+}
+
+.list-members-header span {
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.back-btn {
+    background: none;
+    border: 1px solid #2f3336;
+    color: #e7e9ea;
+    padding: 6px 14px;
+    border-radius: 16px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.back-btn:hover {
+    background: #202327;
+}
+
+#list-members-table-container {
+    flex: 1;
+    overflow-y: auto;
+}
+
 ::-webkit-scrollbar {
     width: 8px;
 }

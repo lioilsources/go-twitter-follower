@@ -91,6 +91,115 @@ func GetFollowing(client *gen.ClientWithResponses, userId string, pagination_tok
 	return res.JSON200.Data, next_token, nil
 }
 
+func GetOwnedLists(client *gen.ClientWithResponses, userId string) ([]gen.List, error) {
+	listFields := gen.ListFieldsParameter{
+		"description",
+		"member_count",
+		"follower_count",
+		"private",
+		"created_at",
+		"owner_id",
+	}
+	params := &gen.ListUserOwnedListsParams{
+		ListFields: &listFields,
+	}
+
+	log.Printf("[fetch] GET /2/users/%s/owned_lists", userId)
+	res, err := client.ListUserOwnedListsWithResponse(context.Background(), userId, params)
+	if err != nil {
+		return nil, fmt.Errorf("API request failed: %w", err)
+	}
+	log.Printf("[fetch] Response: HTTP %d (%d bytes)", res.StatusCode(), len(res.Body))
+	if res.StatusCode() != http.StatusOK {
+		log.Printf("[fetch] Error body: %s", string(res.Body))
+		if res.JSONDefault != nil && res.JSONDefault.Status != nil && res.JSONDefault.Detail != nil {
+			return nil, fmt.Errorf("API error %d: %s: %s", res.StatusCode(), *res.JSONDefault.Status, *res.JSONDefault.Detail)
+		}
+		return nil, fmt.Errorf("API error %d: %s", res.StatusCode(), string(res.Body))
+	}
+	if res.JSON200 == nil || res.JSON200.Data == nil {
+		return nil, nil
+	}
+	return *res.JSON200.Data, nil
+}
+
+func GetListMembers(client *gen.ClientWithResponses, listId string, paginationToken *string) (*[]gen.User, *string, error) {
+	userFields := gen.UserFieldsParameter{
+		"public_metrics",
+		"description",
+		"created_at",
+		"verified",
+		"verified_type",
+		"profile_image_url",
+		"location",
+	}
+	params := &gen.ListGetMembersParams{
+		UserFields: &userFields,
+	}
+	if paginationToken != nil {
+		params.PaginationToken = paginationToken
+	}
+
+	log.Printf("[fetch] GET /2/lists/%s/members (pagination: %v)", listId, paginationToken != nil)
+	res, err := client.ListGetMembersWithResponse(context.Background(), listId, params)
+	if err != nil {
+		return nil, nil, fmt.Errorf("API request failed: %w", err)
+	}
+	log.Printf("[fetch] Response: HTTP %d (%d bytes)", res.StatusCode(), len(res.Body))
+	if res.StatusCode() != http.StatusOK {
+		log.Printf("[fetch] Error body: %s", string(res.Body))
+		if res.JSONDefault != nil && res.JSONDefault.Status != nil && res.JSONDefault.Detail != nil {
+			return nil, nil, fmt.Errorf("API error %d: %s: %s", res.StatusCode(), *res.JSONDefault.Status, *res.JSONDefault.Detail)
+		}
+		return nil, nil, fmt.Errorf("API error %d: %s", res.StatusCode(), string(res.Body))
+	}
+	if res.JSON200 == nil || res.JSON200.Data == nil {
+		return nil, nil, nil
+	}
+
+	var nextToken *string
+	if res.JSON200.Meta != nil && res.JSON200.Meta.NextToken != nil {
+		nextToken = res.JSON200.Meta.NextToken
+	}
+	return res.JSON200.Data, nextToken, nil
+}
+
+// FetchAllListMembers fetches the complete list member list with pagination and rate limiting.
+func FetchAllListMembers(client *gen.ClientWithResponses, listId string) ([]gen.User, error) {
+	all := make([]gen.User, 0)
+
+	f, paginationToken, err := GetListMembers(client, listId, nil)
+	if err != nil {
+		return nil, err
+	}
+	if f != nil {
+		all = append(all, *f...)
+	}
+	log.Printf("Counting list members: %d", len(all))
+
+	if paginationToken == nil {
+		return all, nil
+	}
+
+	rateLimiter := time.Tick(rate_limit)
+	for range rateLimiter {
+		f, paginationToken, err = GetListMembers(client, listId, paginationToken)
+		if err != nil {
+			return nil, err
+		}
+		if f != nil {
+			all = append(all, *f...)
+		}
+		log.Printf("Counting list members: %d", len(all))
+
+		if paginationToken == nil {
+			break
+		}
+	}
+
+	return all, nil
+}
+
 // FetchAllFollowing fetches the complete following list with pagination and rate limiting.
 func FetchAllFollowing(client *gen.ClientWithResponses, userId string) ([]gen.User, error) {
 	all := make([]gen.User, 0)
