@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Twitter Follower Tracker</title>
+    <title>XBoost</title>
     <link rel="stylesheet" href="src/style.css">
 </head>
 <body>
     <div id="app">
         <header>
-            <h1>Following Tracker</h1>
+            <h1>XBoost</h1>
             <div id="account-selector">
                 <select id="account-select" onchange="switchAccount(this.value)">
                     <option value="">No accounts</option>
@@ -17,16 +17,18 @@
                 <button id="manage-accounts-btn" onclick="toggleAccountManager()" title="Manage accounts">+</button>
             </div>
             <div id="stats">
-                <span id="total-count">-</span> following
+                <span id="total-count">-</span> <span id="stats-label">following</span>
                 <span class="separator">|</span>
                 <span id="last-fetch">-</span>
                 <span class="separator">|</span>
+                <span id="next-fetch"></span>
                 <button id="fetch-btn" onclick="fetchNow()">Fetch Now</button>
             </div>
         </header>
 
         <nav class="tabs">
             <button class="tab active" onclick="switchTab('following')">Following</button>
+            <button class="tab" onclick="switchTab('followers')">Followers</button>
             <button class="tab" onclick="switchTab('lists')">Lists</button>
         </nav>
 
@@ -61,6 +63,43 @@
                         </tr>
                     </thead>
                     <tbody id="table-body">
+                        <tr><td colspan="7" class="loading">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Followers Tab -->
+        <div id="tab-followers" class="tab-content">
+            <div class="controls">
+                <input type="text" id="followers-search" placeholder="Search by username, name, or description..." oninput="filterFollowersTable()">
+                <select id="followers-sort-by" onchange="sortFollowersTable()">
+                    <option value="followers_count">Followers</option>
+                    <option value="following_count">Following</option>
+                    <option value="tweet_count">Tweets</option>
+                    <option value="username">Username</option>
+                    <option value="name">Name</option>
+                </select>
+                <select id="followers-sort-dir" onchange="sortFollowersTable()">
+                    <option value="desc">Descending</option>
+                    <option value="asc">Ascending</option>
+                </select>
+            </div>
+
+            <div id="followers-table-container">
+                <table id="followers-table">
+                    <thead>
+                        <tr>
+                            <th class="col-avatar"></th>
+                            <th class="col-user">User</th>
+                            <th class="col-desc">Description</th>
+                            <th class="col-num" onclick="sortFollowersBy('followers_count')">Followers</th>
+                            <th class="col-num" onclick="sortFollowersBy('following_count')">Following</th>
+                            <th class="col-num" onclick="sortFollowersBy('tweet_count')">Tweets</th>
+                            <th class="col-loc">Location</th>
+                        </tr>
+                    </thead>
+                    <tbody id="followers-body">
                         <tr><td colspan="7" class="loading">Loading...</td></tr>
                     </tbody>
                 </table>

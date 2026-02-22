@@ -200,6 +200,83 @@ func FetchAllListMembers(client *gen.ClientWithResponses, listId string) ([]gen.
 	return all, nil
 }
 
+func GetFollowers(client *gen.ClientWithResponses, userId string, paginationToken *string) (*[]gen.User, *string, error) {
+	userFields := gen.UserFieldsParameter{
+		"public_metrics",
+		"description",
+		"created_at",
+		"verified",
+		"verified_type",
+		"profile_image_url",
+		"location",
+	}
+	params := &gen.UsersIdFollowersParams{
+		UserFields: &userFields,
+	}
+	if paginationToken != nil {
+		params.PaginationToken = paginationToken
+	}
+
+	log.Printf("[fetch] GET /2/users/%s/followers (pagination: %v)", userId, paginationToken != nil)
+	res, err := client.UsersIdFollowersWithResponse(context.Background(), userId, params)
+	if err != nil {
+		return nil, nil, fmt.Errorf("API request failed: %w", err)
+	}
+	log.Printf("[fetch] Response: HTTP %d (%d bytes)", res.StatusCode(), len(res.Body))
+	if res.StatusCode() != http.StatusOK {
+		log.Printf("[fetch] Error body: %s", string(res.Body))
+		if res.JSONDefault != nil && res.JSONDefault.Status != nil && res.JSONDefault.Detail != nil {
+			return nil, nil, fmt.Errorf("API error %d: %s: %s", res.StatusCode(), *res.JSONDefault.Status, *res.JSONDefault.Detail)
+		}
+		return nil, nil, fmt.Errorf("API error %d: %s", res.StatusCode(), string(res.Body))
+	}
+	if res.JSON200 == nil || res.JSON200.Data == nil {
+		return nil, nil, fmt.Errorf("API returned empty response")
+	}
+
+	var nextToken *string
+	if res.JSON200.Meta != nil && res.JSON200.Meta.NextToken != nil {
+		nextToken = res.JSON200.Meta.NextToken
+	}
+	return res.JSON200.Data, nextToken, nil
+}
+
+// FetchAllFollowers fetches the complete followers list with pagination and rate limiting.
+func FetchAllFollowers(client *gen.ClientWithResponses, userId string) ([]gen.User, error) {
+	all := make([]gen.User, 0)
+
+	f, paginationToken, err := GetFollowers(client, userId, nil)
+	if err != nil {
+		return nil, err
+	}
+	if f != nil {
+		all = append(all, *f...)
+	}
+	log.Printf("Counting followers: %d", len(all))
+
+	if paginationToken == nil {
+		return all, nil
+	}
+
+	rateLimiter := time.Tick(rate_limit)
+	for range rateLimiter {
+		f, paginationToken, err = GetFollowers(client, userId, paginationToken)
+		if err != nil {
+			return nil, err
+		}
+		if f != nil {
+			all = append(all, *f...)
+		}
+		log.Printf("Counting followers: %d", len(all))
+
+		if paginationToken == nil {
+			break
+		}
+	}
+
+	return all, nil
+}
+
 // FetchAllFollowing fetches the complete following list with pagination and rate limiting.
 func FetchAllFollowing(client *gen.ClientWithResponses, userId string) ([]gen.User, error) {
 	all := make([]gen.User, 0)

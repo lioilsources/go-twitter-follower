@@ -90,6 +90,16 @@ func InitDB() *sql.DB {
 		);
 
 		CREATE INDEX IF NOT EXISTS idx_list_member_user ON list_member_cache(user_id);
+
+		CREATE TABLE IF NOT EXISTS followers_snapshots (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			source_user_id TEXT NOT NULL,
+			target_user_id TEXT NOT NULL,
+			fetched_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_followers_source ON followers_snapshots(source_user_id, fetched_at);
+		CREATE INDEX IF NOT EXISTS idx_followers_target ON followers_snapshots(target_user_id);
 	`)
 	if err != nil {
 		log.Fatal(fmt.Errorf("creating tables: %w", err))
@@ -300,6 +310,48 @@ func LogFetch(db *sql.DB, endpoint, userId string, statusCode int) {
 }
 
 // --- Cache freshness checks (30-day threshold) ---
+
+func IsFollowersCacheFresh(db *sql.DB, sourceUserId string) bool {
+	var fetchedAt string
+	err := db.QueryRow(`
+		SELECT COALESCE(MAX(fetched_at), '') FROM followers_snapshots WHERE source_user_id = ?
+	`, sourceUserId).Scan(&fetchedAt)
+	if err != nil || fetchedAt == "" {
+		return false
+	}
+	t, err := time.Parse(time.RFC3339, fetchedAt)
+	if err != nil {
+		return false
+	}
+	return time.Since(t) < 30*24*time.Hour
+}
+
+func SaveFollowersSnapshot(db *sql.DB, sourceUserId string, users []gen.User) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer tx.Rollback()
+
+	fetchedAt := time.Now().UTC().Format(time.RFC3339)
+
+	stmt, err := tx.Prepare(`
+		INSERT INTO followers_snapshots (source_user_id, target_user_id, fetched_at)
+		VALUES (?, ?, ?)
+	`)
+	if err != nil {
+		return fmt.Errorf("preparing statement: %w", err)
+	}
+	defer stmt.Close()
+
+	for _, user := range users {
+		if _, err := stmt.Exec(sourceUserId, user.Id, fetchedAt); err != nil {
+			return fmt.Errorf("inserting snapshot for user %s: %w", user.Id, err)
+		}
+	}
+
+	return tx.Commit()
+}
 
 func IsFollowingCacheFresh(db *sql.DB, sourceUserId string) bool {
 	var fetchedAt string

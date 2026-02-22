@@ -1,4 +1,5 @@
 let allUsers = [];
+let allFollowers = [];
 
 // --- Account management ---
 
@@ -98,6 +99,29 @@ async function loadAccountList() {
     }
 }
 
+// --- Stats display ---
+
+function updateStatsDisplay(stats, label) {
+    document.getElementById('total-count').textContent = stats.total_count || 0;
+    document.getElementById('stats-label').textContent = label;
+    document.getElementById('last-fetch').textContent = stats.last_fetch_at
+        ? 'Fetched: ' + new Date(stats.last_fetch_at).toLocaleDateString()
+        : 'Not fetched yet';
+
+    const nextEl = document.getElementById('next-fetch');
+    if (stats.cache_expires_at) {
+        const expires = new Date(stats.cache_expires_at);
+        const now = new Date();
+        if (expires > now) {
+            nextEl.textContent = 'Next: ' + expires.toLocaleDateString();
+        } else {
+            nextEl.textContent = 'Cache expired';
+        }
+    } else {
+        nextEl.textContent = '';
+    }
+}
+
 // --- Data loading ---
 
 async function loadData() {
@@ -106,11 +130,7 @@ async function loadData() {
         const stats = await window.go.main.App.GetStats();
 
         allUsers = users || [];
-        document.getElementById('total-count').textContent = stats.total_following;
-        document.getElementById('last-fetch').textContent = stats.last_fetch_at
-            ? 'Last: ' + new Date(stats.last_fetch_at).toLocaleTimeString()
-            : 'Not fetched yet';
-
+        updateStatsDisplay(stats, 'following');
         renderTable(allUsers);
     } catch (err) {
         console.error('Error loading data:', err);
@@ -191,6 +211,95 @@ function sortBy(field) {
     sortTable();
 }
 
+// --- Followers ---
+
+async function loadFollowers() {
+    try {
+        const users = await window.go.main.App.GetFollowersList();
+        const stats = await window.go.main.App.GetFollowersStats();
+
+        allFollowers = users || [];
+        updateStatsDisplay(stats, 'followers');
+        renderFollowersTable(allFollowers);
+    } catch (err) {
+        console.error('Error loading followers:', err);
+        document.getElementById('followers-body').innerHTML =
+            '<tr><td colspan="7" class="loading">Error loading data</td></tr>';
+    }
+}
+
+function renderFollowersTable(users) {
+    const tbody = document.getElementById('followers-body');
+
+    if (!users || users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="loading">No data yet. Click Fetch Now to start.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = users.map(u => `
+        <tr>
+            <td>${u.profile_image_url
+                ? `<img class="avatar" src="${u.profile_image_url}" alt="" loading="lazy">`
+                : '<div class="avatar"></div>'}</td>
+            <td>
+                <div class="user-cell">
+                    <span class="user-name">
+                        ${escapeHtml(u.name)}${u.verified ? '<span class="verified-badge">&#x2713;</span>' : ''}
+                    </span>
+                    <span class="user-handle">@${escapeHtml(u.username)}</span>
+                </div>
+            </td>
+            <td class="desc-cell" title="${escapeHtml(u.description)}">${escapeHtml(u.description)}</td>
+            <td class="num-cell">${formatNumber(u.followers_count)}</td>
+            <td class="num-cell">${formatNumber(u.following_count)}</td>
+            <td class="num-cell">${formatNumber(u.tweet_count)}</td>
+            <td class="loc-cell">${escapeHtml(u.location)}</td>
+        </tr>
+    `).join('');
+}
+
+function filterFollowersTable() {
+    const query = document.getElementById('followers-search').value.toLowerCase();
+    const filtered = allFollowers.filter(u =>
+        u.username.toLowerCase().includes(query) ||
+        u.name.toLowerCase().includes(query) ||
+        (u.description && u.description.toLowerCase().includes(query))
+    );
+    renderFollowersTable(filtered);
+}
+
+function sortFollowersTable() {
+    const sortByVal = document.getElementById('followers-sort-by').value;
+    const sortDir = document.getElementById('followers-sort-dir').value;
+
+    const sorted = [...allFollowers].sort((a, b) => {
+        let va = a[sortByVal];
+        let vb = b[sortByVal];
+
+        if (typeof va === 'string') {
+            va = va.toLowerCase();
+            vb = vb.toLowerCase();
+            return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+        }
+        return sortDir === 'asc' ? va - vb : vb - va;
+    });
+
+    renderFollowersTable(sorted);
+}
+
+function sortFollowersBy(field) {
+    const sortByEl = document.getElementById('followers-sort-by');
+    const sortDirEl = document.getElementById('followers-sort-dir');
+
+    if (sortByEl.value === field) {
+        sortDirEl.value = sortDirEl.value === 'desc' ? 'asc' : 'desc';
+    } else {
+        sortByEl.value = field;
+        sortDirEl.value = 'desc';
+    }
+    sortFollowersTable();
+}
+
 async function fetchNow() {
     const btn = document.getElementById('fetch-btn');
     btn.disabled = true;
@@ -198,10 +307,15 @@ async function fetchNow() {
 
     try {
         const isListsTab = document.getElementById('tab-lists').classList.contains('active');
+        const isFollowersTab = document.getElementById('tab-followers').classList.contains('active');
         if (isListsTab) {
             const result = await window.go.main.App.FetchListsNow();
             console.log(result);
             await loadLists();
+        } else if (isFollowersTab) {
+            const result = await window.go.main.App.FetchFollowersNow();
+            console.log(result);
+            await loadFollowers();
         } else {
             const result = await window.go.main.App.FetchNow();
             console.log(result);
@@ -226,6 +340,10 @@ function switchTab(tab) {
 
     if (tab === 'lists') {
         loadLists();
+    } else if (tab === 'followers') {
+        loadFollowers();
+    } else if (tab === 'following') {
+        loadData();
     }
 }
 
@@ -242,9 +360,12 @@ async function loadLists() {
     document.getElementById('list-members-view').style.display = 'none';
 
     try {
+        const stats = await window.go.main.App.GetListsStats();
+        updateStatsDisplay(stats, 'lists');
+
         const lists = await window.go.main.App.GetOwnedLists();
         if (!lists || lists.length === 0) {
-            grid.innerHTML = '<div class="loading">No lists found</div>';
+            grid.innerHTML = '<div class="loading">No lists found. Click Fetch Now to start.</div>';
             return;
         }
 

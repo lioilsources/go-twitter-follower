@@ -38,9 +38,9 @@ type FollowingUser struct {
 }
 
 type Stats struct {
-	TotalFollowing int    `json:"total_following"`
+	TotalCount     int    `json:"total_count"`
 	LastFetchAt    string `json:"last_fetch_at"`
-	TotalFetches   int    `json:"total_fetches"`
+	CacheExpiresAt string `json:"cache_expires_at"`
 }
 
 func NewApp() *App {
@@ -153,17 +153,37 @@ type TwitterList struct {
 	Private     bool   `json:"private"`
 }
 
+func (a *App) GetListsStats() Stats {
+	var stats Stats
+	if a.selectedAccountID == "" {
+		return stats
+	}
+
+	a.db.QueryRow(`
+		SELECT COUNT(DISTINCT lmc.user_id)
+		FROM list_member_cache lmc
+		JOIN list_cache lc ON lmc.list_id = lc.list_id AND lc.owner_user_id = ?
+	`, a.selectedAccountID).Scan(&stats.TotalCount)
+
+	var fetchedAt string
+	a.db.QueryRow(`
+		SELECT COALESCE(MAX(fetched_at), '') FROM list_cache WHERE owner_user_id = ?
+	`, a.selectedAccountID).Scan(&fetchedAt)
+	if fetchedAt != "" {
+		stats.LastFetchAt = fetchedAt
+		if t, err := time.Parse(time.RFC3339, fetchedAt); err == nil {
+			stats.CacheExpiresAt = t.Add(30 * 24 * time.Hour).Format(time.RFC3339)
+		}
+	}
+
+	return stats
+}
+
 func (a *App) GetOwnedLists() []TwitterList {
 	if a.selectedAccountID == "" {
 		return nil
 	}
-
-	if IsListCacheFresh(a.db, a.selectedAccountID) {
-		log.Printf("[cache] Lists cache fresh for %s, serving from cache", a.selectedAccountID)
-		return GetCachedLists(a.db, a.selectedAccountID)
-	}
-
-	return a.fetchAndCacheOwnedLists()
+	return GetCachedLists(a.db, a.selectedAccountID)
 }
 
 func (a *App) fetchAndCacheOwnedLists() []TwitterList {
@@ -214,13 +234,7 @@ func (a *App) GetListMembers(listId string) []FollowingUser {
 	if a.selectedAccountID == "" {
 		return nil
 	}
-
-	if IsListMemberCacheFresh(a.db, listId) {
-		log.Printf("[cache] List members cache fresh for list %s, serving from cache", listId)
-		return a.getListMembersFromCache(listId)
-	}
-
-	return a.fetchAndCacheListMembers(listId)
+	return a.getListMembersFromCache(listId)
 }
 
 func (a *App) getListMembersFromCache(listId string) []FollowingUser {
@@ -290,6 +304,128 @@ func (a *App) enrichWithListNames(users []FollowingUser) []FollowingUser {
 	return users
 }
 
+// --- Followers ---
+
+func (a *App) GetFollowersList() []FollowingUser {
+	if a.selectedAccountID == "" {
+		return nil
+	}
+
+	rows, err := a.db.Query(`
+		SELECT u.id, u.username, COALESCE(u.name, ''), COALESCE(u.description, ''),
+			COALESCE(u.followers_count, 0), COALESCE(u.following_count, 0),
+			COALESCE(u.tweet_count, 0), COALESCE(u.listed_count, 0),
+			COALESCE(u.verified, 0), COALESCE(u.verified_type, ''),
+			COALESCE(u.profile_image_url, ''), COALESCE(u.location, ''),
+			COALESCE(u.created_at, ''), COALESCE(u.updated_at, '')
+		FROM users u
+		INNER JOIN followers_snapshots fs ON u.id = fs.target_user_id
+		WHERE fs.source_user_id = ?
+		  AND fs.fetched_at = (
+			  SELECT MAX(fetched_at) FROM followers_snapshots
+			  WHERE source_user_id = ?
+		  )
+		ORDER BY u.followers_count DESC
+	`, a.selectedAccountID, a.selectedAccountID)
+	if err != nil {
+		log.Printf("Error querying followers: %v", err)
+		return nil
+	}
+	defer rows.Close()
+
+	var users []FollowingUser
+	for rows.Next() {
+		var u FollowingUser
+		var verified int
+		err := rows.Scan(&u.Id, &u.Username, &u.Name, &u.Description,
+			&u.FollowersCount, &u.FollowingCount, &u.TweetCount, &u.ListedCount,
+			&verified, &u.VerifiedType, &u.ProfileImageUrl, &u.Location,
+			&u.CreatedAt, &u.UpdatedAt)
+		if err != nil {
+			log.Printf("Error scanning follower: %v", err)
+			continue
+		}
+		u.Verified = verified == 1
+		users = append(users, u)
+	}
+	return users
+}
+
+func (a *App) GetFollowersStats() Stats {
+	var stats Stats
+	if a.selectedAccountID == "" {
+		return stats
+	}
+
+	a.db.QueryRow(`
+		SELECT COUNT(*) FROM followers_snapshots
+		WHERE source_user_id = ?
+		  AND fetched_at = (SELECT MAX(fetched_at) FROM followers_snapshots WHERE source_user_id = ?)
+	`, a.selectedAccountID, a.selectedAccountID).Scan(&stats.TotalCount)
+
+	var fetchedAt string
+	a.db.QueryRow(`
+		SELECT COALESCE(MAX(fetched_at), '') FROM followers_snapshots WHERE source_user_id = ?
+	`, a.selectedAccountID).Scan(&fetchedAt)
+	if fetchedAt != "" {
+		stats.LastFetchAt = fetchedAt
+		if t, err := time.Parse(time.RFC3339, fetchedAt); err == nil {
+			stats.CacheExpiresAt = t.Add(30 * 24 * time.Hour).Format(time.RFC3339)
+		}
+	}
+
+	return stats
+}
+
+func (a *App) FetchFollowersNow() string {
+	if a.selectedAccountID == "" {
+		return "No account selected. Add an account first."
+	}
+
+	acct, err := GetAccountByUserID(a.db, a.selectedAccountID)
+	if err != nil {
+		return "Account not found."
+	}
+
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if IsFollowersCacheFresh(a.db, acct.UserID) {
+		msg := fmt.Sprintf("Cache fresh for @%s followers, skipping API call", acct.Username)
+		log.Println(msg)
+		return msg
+	}
+
+	log.Printf("[fetch] Fetching followers for @%s (user_id=%s)", acct.Username, acct.UserID)
+	client, err := NewAuthClient(acct.BearerToken)
+	if err != nil {
+		msg := fmt.Sprintf("Error for @%s: %v", acct.Username, err)
+		log.Println(msg)
+		return msg
+	}
+
+	all, err := FetchAllFollowers(client, acct.UserID)
+	if err != nil {
+		msg := fmt.Sprintf("Fetch error for @%s: %v", acct.Username, err)
+		log.Println(msg)
+		return msg
+	}
+
+	for _, user := range all {
+		if err := UpsertUser(a.db, user); err != nil {
+			log.Printf("Warning: failed to upsert user %s: %v", user.Id, err)
+		}
+	}
+	if err := SaveFollowersSnapshot(a.db, acct.UserID, all); err != nil {
+		log.Printf("Warning: failed to save followers snapshot: %v", err)
+	}
+	LogFetch(a.db, "GET /2/users/:id/followers", acct.UserID, 200)
+
+	msg := fmt.Sprintf("Fetched %d followers for @%s at %s", len(all), acct.Username, time.Now().Format("15:04:05"))
+	log.Println(msg)
+	return msg
+}
+
 // --- Fetching (manual only, no scheduler) ---
 
 // FetchNow fetches following for the currently selected account (manual trigger from UI).
@@ -306,10 +442,16 @@ func (a *App) FetchNow() string {
 	return a.fetchFollowingForAccount(*acct)
 }
 
-// FetchListsNow force-fetches owned lists + all members (bypasses cache).
+// FetchListsNow fetches owned lists + all members (with 30-day cache check).
 func (a *App) FetchListsNow() string {
 	if a.selectedAccountID == "" {
 		return "No account selected. Add an account first."
+	}
+
+	if IsListCacheFresh(a.db, a.selectedAccountID) {
+		msg := fmt.Sprintf("Cache fresh for lists, skipping API call")
+		log.Println(msg)
+		return msg
 	}
 
 	lists := a.fetchAndCacheOwnedLists()
@@ -421,15 +563,18 @@ func (a *App) GetStats() Stats {
 		SELECT COUNT(*) FROM following_snapshots
 		WHERE source_user_id = ?
 		  AND fetched_at = (SELECT MAX(fetched_at) FROM following_snapshots WHERE source_user_id = ?)
-	`, a.selectedAccountID, a.selectedAccountID).Scan(&stats.TotalFollowing)
+	`, a.selectedAccountID, a.selectedAccountID).Scan(&stats.TotalCount)
 
+	var fetchedAt string
 	a.db.QueryRow(`
-		SELECT COALESCE(MAX(created_at), '') FROM fetch_logs WHERE user_id = ?
-	`, a.selectedAccountID).Scan(&stats.LastFetchAt)
-
-	a.db.QueryRow(`
-		SELECT COUNT(*) FROM fetch_logs WHERE user_id = ?
-	`, a.selectedAccountID).Scan(&stats.TotalFetches)
+		SELECT COALESCE(MAX(fetched_at), '') FROM following_snapshots WHERE source_user_id = ?
+	`, a.selectedAccountID).Scan(&fetchedAt)
+	if fetchedAt != "" {
+		stats.LastFetchAt = fetchedAt
+		if t, err := time.Parse(time.RFC3339, fetchedAt); err == nil {
+			stats.CacheExpiresAt = t.Add(30 * 24 * time.Hour).Format(time.RFC3339)
+		}
+	}
 
 	return stats
 }

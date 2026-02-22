@@ -66,12 +66,11 @@ func main() {
 	}
 
 	err := wails.Run(&options.App{
-		Title:            "Twitter Following Tracker",
+		Title:            "XBoost",
 		Width:            1024,
 		Height:           700,
 		MinWidth:         800,
 		MinHeight:        500,
-		HideWindowOnClose: true,
 		AssetServer: &assetserver.Options{
 			Assets: frontendFS,
 		},
@@ -83,7 +82,7 @@ func main() {
 		Mac: &mac.Options{
 			TitleBar: mac.TitleBarHiddenInset(),
 			About: &mac.AboutInfo{
-				Title:   "Twitter Following Tracker",
+				Title:   "XBoost",
 				Message: "Follower analysis tool for X/Twitter",
 			},
 		},
