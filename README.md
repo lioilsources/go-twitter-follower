@@ -1,14 +1,14 @@
 # Boost Your Twitter/X Account by Stats
 
 # 21/2/2026
-- accounts stats from all account lists
-- followers list stats
+- accounts stats from all account lists ($1/100)
+- followers list stats ($14/2K)
 
 # 15/2/2026
 - Claude Code introduced
 - walis V2 UI for macOS desktop
 - sqlite support to cache responses 
-- following list stats
+- following list stats ($25/2.2K)
 - multi account support
 - pay per request for X V2 API calls
 

@@ -153,7 +153,11 @@
                 <input type="password" id="new-bearer" placeholder="Bearer token">
                 <button id="add-account-btn" onclick="addAccount()">Add Account</button>
             </div>
-            <button class="modal-close" onclick="toggleAccountManager()">Close</button>
+            <hr style="margin: 12px 0; border: none; border-top: 1px solid #333;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <button id="export-btn" onclick="exportData()" style="background: #1a5c2a; padding: 6px 14px; border-radius: 4px; border: none; color: #fff; cursor: pointer;">Export Data (JSON)</button>
+                <button class="modal-close" onclick="toggleAccountManager()">Close</button>
+            </div>
         </div>
     </div>
 

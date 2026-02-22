@@ -451,6 +451,32 @@ function filterListMembers() {
     renderListMembers(filtered);
 }
 
+// --- Export ---
+
+async function exportData() {
+    const btn = document.getElementById('export-btn');
+    btn.disabled = true;
+    btn.textContent = 'Exporting...';
+
+    try {
+        const json = await window.go.main.App.ExportData();
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'xboost-export-' + new Date().toISOString().slice(0, 10) + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        alert('Export failed: ' + err);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Export Data (JSON)';
+    }
+}
+
 // --- Utilities ---
 
 function formatNumber(n) {

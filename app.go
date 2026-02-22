@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"sync"
@@ -577,6 +578,78 @@ func (a *App) GetStats() Stats {
 	}
 
 	return stats
+}
+
+// --- Export ---
+
+type ExportPayload struct {
+	ExportedAt         string                   `json:"exported_at"`
+	Users              []map[string]interface{} `json:"users"`
+	FollowingSnapshots []map[string]interface{} `json:"following_snapshots"`
+	FollowersSnapshots []map[string]interface{} `json:"followers_snapshots"`
+	Accounts           []map[string]interface{} `json:"accounts"`
+	ListCache          []map[string]interface{} `json:"list_cache"`
+	ListMemberCache    []map[string]interface{} `json:"list_member_cache"`
+	FetchLogs          []map[string]interface{} `json:"fetch_logs"`
+}
+
+func (a *App) ExportData() (string, error) {
+	payload := ExportPayload{
+		ExportedAt: time.Now().UTC().Format(time.RFC3339),
+	}
+
+	tables := []struct {
+		query string
+		dest  *[]map[string]interface{}
+	}{
+		{`SELECT id, username, COALESCE(name,'') as name, COALESCE(description,'') as description,
+			COALESCE(followers_count,0) as followers_count, COALESCE(following_count,0) as following_count,
+			COALESCE(tweet_count,0) as tweet_count, COALESCE(listed_count,0) as listed_count,
+			COALESCE(verified,0) as verified, COALESCE(verified_type,'') as verified_type,
+			COALESCE(profile_image_url,'') as profile_image_url, COALESCE(location,'') as location,
+			COALESCE(created_at,'') as created_at, COALESCE(updated_at,'') as updated_at FROM users`, &payload.Users},
+		{`SELECT id, source_user_id, target_user_id, fetched_at FROM following_snapshots`, &payload.FollowingSnapshots},
+		{`SELECT id, source_user_id, target_user_id, fetched_at FROM followers_snapshots`, &payload.FollowersSnapshots},
+		{`SELECT id, user_id, username, bearer_token, is_active, created_at FROM accounts`, &payload.Accounts},
+		{`SELECT list_id, owner_user_id, name, description, member_count, private, fetched_at FROM list_cache`, &payload.ListCache},
+		{`SELECT list_id, user_id, fetched_at FROM list_member_cache`, &payload.ListMemberCache},
+		{`SELECT id, endpoint, user_id, status_code, created_at FROM fetch_logs`, &payload.FetchLogs},
+	}
+
+	for _, t := range tables {
+		rows, err := a.db.Query(t.query)
+		if err != nil {
+			return "", fmt.Errorf("querying: %w", err)
+		}
+		cols, _ := rows.Columns()
+		for rows.Next() {
+			vals := make([]interface{}, len(cols))
+			ptrs := make([]interface{}, len(cols))
+			for i := range vals {
+				ptrs[i] = &vals[i]
+			}
+			if err := rows.Scan(ptrs...); err != nil {
+				rows.Close()
+				return "", fmt.Errorf("scanning: %w", err)
+			}
+			row := make(map[string]interface{})
+			for i, col := range cols {
+				v := vals[i]
+				if b, ok := v.([]byte); ok {
+					v = string(b)
+				}
+				row[col] = v
+			}
+			*t.dest = append(*t.dest, row)
+		}
+		rows.Close()
+	}
+
+	data, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("marshaling JSON: %w", err)
+	}
+	return string(data), nil
 }
 
 // --- Helpers ---
